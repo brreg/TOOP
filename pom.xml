@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>no.brreg</groupId>
+    <artifactId>TOOP</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <organization>
+        <name>Brønnøysundregistrene</name>
+        <url>https://www.brreg.no</url>
+    </organization>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.2.3.RELEASE</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <!--standard properties-->
+        <java.version>1.8</java.version>
+        <java.encoding>UTF-8</java.encoding>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.exec.skip>false</maven.exec.skip>
+        <!--end standard properties-->
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>eu.toop</groupId>
+            <artifactId>tc-main</artifactId>
+            <version>2.0.0-rc3</version>
+        </dependency>
+        <dependency>
+            <groupId>eu.toop</groupId>
+            <artifactId>toop-mem-phase4</artifactId>
+            <version>0.10.8</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-ui</artifactId>
+            <version>1.2.32</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+                <targetPath>${project.build.outputDirectory}</targetPath>
+                <excludes>
+                    <exclude>banner.txt</exclude>
+                </excludes>
+                <filtering>false</filtering>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+                <targetPath>${project.build.outputDirectory}</targetPath>
+                <includes>
+                    <include>banner.txt</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <groupId>com.google.code.maven-replacer-plugin</groupId>
+                <artifactId>replacer</artifactId>
+                <version>1.5.3</version>
+                <executions>
+                    <execution>
+                        <id>replace-version-number</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <ignoreErrors>false</ignoreErrors>
+                    <ignoreMissingFile>false</ignoreMissingFile>
+                    <file>${project.basedir}/src/main/java/no/brreg/toop/spring/ApplicationInfo.template</file>
+                    <outputFile>${project.basedir}/src/main/java/no/brreg/toop/generated/spring/ApplicationInfo.java</outputFile>
+                    <token>%VERSION%</token>
+                    <value>${project.version}</value>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <testSource>${java.version}</testSource>
+                    <testTarget>${java.version}</testTarget>
+                    <encoding>${java.encoding}</encoding>
+                    <compilerArgument>-Xlint:unchecked</compilerArgument>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
