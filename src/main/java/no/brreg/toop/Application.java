@@ -29,11 +29,18 @@ public class Application {
     private static Logger LOGGER = LoggerFactory.getLogger(Application.class);
 
     @Autowired
+    private CountryCodeCache countryCodeCache;
+
+    @Autowired
     private ServletContext servletContext;
 
 
     @EventListener(ApplicationReadyEvent.class)
-    public void initializeToopConnector() {
+    public void initializeAplication() {
+        initializeToopConnector();
+        countryCodeCache.update();
+    }
+    private void initializeToopConnector() {
         SystemProperties.setPropertyValue(MetaAS4Manager.SYSTEM_PROPERTY_PHASE4_MANAGER_INMEMORY, true);
         WebScopeManager.onGlobalBegin(servletContext);
         TCInit.initGlobally(servletContext, null);
