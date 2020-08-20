@@ -1,0 +1,54 @@
+openapi: 3.0.2
+info:
+  title: TOOP
+  version: '2.0.0'
+servers:
+  - url: 'https://toop.brreg.no/'
+paths:
+  /phase4:
+    get:
+      operationId: phase4Callback
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+  /query:
+    get:
+      description: Query for valid country codes
+      operationId: getCountryCodes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /query/{countrycode}/{orgno}:
+    get:
+      description: Query for a given orgno
+      operationId: getOrgno
+      parameters:
+        - name: countrycode
+          in: path
+          required: true
+          description: The orgno country code
+          schema:
+            type: string
+        - name: orgno
+          in: path
+          required: true
+          description: The orgno
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string

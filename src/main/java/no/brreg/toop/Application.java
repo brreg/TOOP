@@ -1,5 +1,7 @@
 package no.brreg.toop;
 
+import com.helger.commons.system.SystemProperties;
+import com.helger.phase4.mgr.MetaAS4Manager;
 import com.helger.web.scope.mgr.WebScopeManager;
 import eu.toop.connector.app.TCInit;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
@@ -32,8 +34,9 @@ public class Application {
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeToopConnector() {
+        SystemProperties.setPropertyValue(MetaAS4Manager.SYSTEM_PROPERTY_PHASE4_MANAGER_INMEMORY, true);
         WebScopeManager.onGlobalBegin(servletContext);
-        TCInit.initGlobally(servletContext);
+        TCInit.initGlobally(servletContext, null);
     }
 
     @PreDestroy

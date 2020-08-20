@@ -29,18 +29,20 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.exec.skip>false</maven.exec.skip>
         <!--end standard properties-->
+
+        <toop.connector.version>2.0.0-SNAPSHOT</toop.connector.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>eu.toop</groupId>
             <artifactId>tc-main</artifactId>
-            <version>2.0.0-rc3</version>
+            <version>${toop.connector.version}</version>
         </dependency>
         <dependency>
             <groupId>eu.toop</groupId>
             <artifactId>tc-mem-phase4</artifactId>
-            <version>2.0.0-rc3</version>
+            <version>${toop.connector.version}</version>
         </dependency>
 
         <dependency>
@@ -52,6 +54,12 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-ui</artifactId>
             <version>1.2.32</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-swagger2</artifactId>
+            <version>2.9.2</version>
         </dependency>
     </dependencies>
 
@@ -76,6 +84,39 @@
         </resources>
 
         <plugins>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>4.3.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/src/main/resources/openAPI/toop.yaml</inputSpec>
+                            <skipValidateSpec>false</skipValidateSpec>
+                            <generatorName>spring</generatorName>
+                            <templateDirectory>${project.basedir}/src/main/resources/openAPI/openapi-generator-maven-plugin/templates/JavaSpring</templateDirectory>
+                            <output>${project.build.directory}/generated-sources/openapi</output>
+                            <invokerPackage>no.brreg.toop.generated</invokerPackage>
+                            <apiPackage>no.brreg.toop.generated.api</apiPackage>
+                            <modelPackage>no.brreg.toop.generated.model</modelPackage>
+                            <configOptions>
+                                <allowUnicodeIdentifiers>true</allowUnicodeIdentifiers>
+                                <sourceFolder>src/main/java/gen</sourceFolder>
+                                <hideGenerationTimestamp>true</hideGenerationTimestamp>
+                                <java8>true</java8>
+                                <dateLibrary>java8</dateLibrary>
+                                <library>spring-boot</library>
+                                <delegatePattern>false</delegatePattern>
+                            </configOptions>
+                            <generateSupportingFiles>true</generateSupportingFiles>
+                            <supportingFilesToGenerate>ApiUtil.java</supportingFilesToGenerate>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>com.google.code.maven-replacer-plugin</groupId>
                 <artifactId>replacer</artifactId>
@@ -118,5 +159,18 @@
             </plugin>
         </plugins>
     </build>
+
+    <repositories>
+        <repository>
+            <id>central.snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+        </repository>
+    </repositories>
 
 </project>

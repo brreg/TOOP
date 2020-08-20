@@ -1,0 +1,6 @@
+api.mustache:
+* Added HttpServletRequest and HttpServletRequest needed by CachableDispatcherServlet and "Content-Type"/"Accept"-header functionality
+* Added parameters to the @RequestMapping
+
+apiController.mustache
+* Basically removed everything...
