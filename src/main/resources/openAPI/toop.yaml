@@ -52,3 +52,88 @@ paths:
                 type: array
                 items:
                   type: string
+components:
+  schemas:
+    Enhet:
+      type: object
+      properties:
+        organisasjonsnummer:
+          type: string
+        navn:
+          type: string
+        organisasjonsform:
+          $ref: "#/components/schemas/Organisasjonsform"
+        registreringsdatoEnhetsregisteret:
+          type: string
+        registrertIMvaregisteret:
+          type: boolean
+        naeringskode1:
+          $ref: "#/components/schemas/Naeringskode"
+        naeringskode2:
+          $ref: "#/components/schemas/Naeringskode"
+        naeringskode3:
+          $ref: "#/components/schemas/Naeringskode"
+        antallAnsatte:
+          type: integer
+        stiftelsedato:
+          type: string
+        institusjonellSektorkode:
+          $ref: "#/components/schemas/Sektorkode"
+        registrertIForetaksregisteret:
+          type: boolean
+        registrertIStiftelsesregisteret:
+          type: boolean
+        registrertIFrivillighetsregisteret:
+          type: boolean
+        sisteInnsendteAarsregnskap:
+          type: string
+        konkurs:
+          type: boolean
+        underAvvikling:
+          type: boolean
+        underTvangsavviklingEllerTvangsopplosning:
+          type: boolean
+        maalform:
+          type: string
+        _links:
+          $ref: "#/components/schemas/Self"
+    Naeringskode:
+      type: object
+      properties:
+        kode:
+          type: string
+        beskrivelse:
+          type: string
+    Sektorkode:
+      type: object
+      properties:
+        kode:
+          type: string
+        beskrivelse:
+          type: string
+    Organisasjonsformer:
+      type: object
+      properties:
+        organisasjonsformer:
+          type: array
+          items:
+            $ref: "#/components/schemas/Organisasjonsform"
+    Organisasjonsform:
+      type: object
+      properties:
+        kode:
+          type: string
+        beskrivelse:
+          type: string
+        _links:
+          $ref: "#/components/schemas/Self"
+    Self:
+      type: object
+      properties:
+        self:
+          $ref: "#/components/schemas/Href"
+    Href:
+      type: object
+      properties:
+        href:
+          type: string
