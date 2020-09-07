@@ -17,8 +17,8 @@ public class CountryCodeCache {
     private static final TemporalAmount CACHE_VALID_DURATION = Duration.ofHours(12);
     private AtomicBoolean isUpgradingCache = new AtomicBoolean(false);
 
-    private List<String> countryCodes = new ArrayList<>();
-    private Object countryCodesLock = new Object();
+    private static List<String> countryCodes = new ArrayList<>();
+    private static Object countryCodesLock = new Object();
 
 
     public void update() {

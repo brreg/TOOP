@@ -61,6 +61,10 @@ components:
           type: string
         navn:
           type: string
+        forretningsadresse:
+          $ref: "#/components/schemas/Adresse"
+        postadresse:
+          $ref: "#/components/schemas/Adresse"
         organisasjonsform:
           $ref: "#/components/schemas/Organisasjonsform"
         registreringsdatoEnhetsregisteret:
@@ -97,6 +101,25 @@ components:
           type: string
         _links:
           $ref: "#/components/schemas/Self"
+    Adresse:
+      type: object
+      properties:
+        landkode:
+          type: string
+        land:
+          type: string
+        kommunenummer:
+          type: string
+        kommune:
+          type: string
+        postnummer:
+          type: string
+        poststed:
+          type: string
+        adresse:
+          type: array
+          items:
+            type: string
     Naeringskode:
       type: object
       properties:

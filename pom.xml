@@ -3,9 +3,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>no.brreg</groupId>
-    <artifactId>TOOP</artifactId>
+    <artifactId>toop</artifactId>
     <version>2.0.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <organization>
         <name>Brønnøysundregistrene</name>
@@ -20,155 +20,16 @@
     </parent>
 
     <properties>
-        <!--standard properties-->
-        <java.version>1.8</java.version>
-        <java.encoding>UTF-8</java.encoding>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
-        <maven.exec.skip>false</maven.exec.skip>
-        <!--end standard properties-->
-
-        <toop.connector.version>2.0.0-SNAPSHOT</toop.connector.version>
+        <docker.registry>quay.apps.ocp-svc.base.brreg.no</docker.registry>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>eu.toop</groupId>
-            <artifactId>tc-main</artifactId>
-            <version>${toop.connector.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>eu.toop</groupId>
-            <artifactId>tc-mem-phase4</artifactId>
-            <version>${toop.connector.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-ui</artifactId>
-            <version>1.2.32</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openapitools</groupId>
-            <artifactId>jackson-databind-nullable</artifactId>
-            <version>0.2.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger2</artifactId>
-            <version>2.9.2</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.mashape.unirest</groupId>
-            <artifactId>unirest-java</artifactId>
-            <version>1.4.9</version>
-        </dependency>
-    </dependencies>
+    <modules>
+		<module>toop-smp</module>
+		<module>toop-connector</module>
+	</modules>
 
     <build>
-        <resources>
-            <resource>
-                <directory>${project.basedir}/src/main/resources</directory>
-                <targetPath>${project.build.outputDirectory}</targetPath>
-                <excludes>
-                    <exclude>banner.txt</exclude>
-                </excludes>
-                <filtering>false</filtering>
-            </resource>
-            <resource>
-                <directory>${project.basedir}/src/main/resources</directory>
-                <targetPath>${project.build.outputDirectory}</targetPath>
-                <includes>
-                    <include>banner.txt</include>
-                </includes>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
-
         <plugins>
-            <plugin>
-                <groupId>org.openapitools</groupId>
-                <artifactId>openapi-generator-maven-plugin</artifactId>
-                <version>4.3.1</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                        <configuration>
-                            <inputSpec>${project.basedir}/src/main/resources/openAPI/toop.yaml</inputSpec>
-                            <skipValidateSpec>false</skipValidateSpec>
-                            <generatorName>spring</generatorName>
-                            <templateDirectory>${project.basedir}/src/main/resources/openAPI/openapi-generator-maven-plugin/templates/JavaSpring</templateDirectory>
-                            <output>${project.build.directory}/generated-sources/openapi</output>
-                            <invokerPackage>no.brreg.toop.generated</invokerPackage>
-                            <apiPackage>no.brreg.toop.generated.api</apiPackage>
-                            <modelPackage>no.brreg.toop.generated.model</modelPackage>
-                            <configOptions>
-                                <allowUnicodeIdentifiers>true</allowUnicodeIdentifiers>
-                                <sourceFolder>src/main/java/gen</sourceFolder>
-                                <hideGenerationTimestamp>true</hideGenerationTimestamp>
-                                <java8>true</java8>
-                                <dateLibrary>java8</dateLibrary>
-                                <library>spring-boot</library>
-                                <delegatePattern>false</delegatePattern>
-                            </configOptions>
-                            <generateSupportingFiles>true</generateSupportingFiles>
-                            <supportingFilesToGenerate>ApiUtil.java</supportingFilesToGenerate>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>com.google.code.maven-replacer-plugin</groupId>
-                <artifactId>replacer</artifactId>
-                <version>1.5.3</version>
-                <executions>
-                    <execution>
-                        <id>replace-version-number</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>replace</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <ignoreErrors>false</ignoreErrors>
-                    <ignoreMissingFile>false</ignoreMissingFile>
-                    <file>${project.basedir}/src/main/java/no/brreg/toop/spring/ApplicationInfo.template</file>
-                    <outputFile>${project.basedir}/src/main/java/no/brreg/toop/generated/spring/ApplicationInfo.java</outputFile>
-                    <token>%VERSION%</token>
-                    <value>${project.version}</value>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                    <testSource>${java.version}</testSource>
-                    <testTarget>${java.version}</testTarget>
-                    <encoding>${java.encoding}</encoding>
-                    <compilerArgument>-Xlint:unchecked</compilerArgument>
-                </configuration>
-            </plugin>
-
             <!-- mvn versions:display-dependency-updates -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -177,18 +38,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <repositories>
-        <repository>
-            <id>central.snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </repository>
-    </repositories>
 
 </project>

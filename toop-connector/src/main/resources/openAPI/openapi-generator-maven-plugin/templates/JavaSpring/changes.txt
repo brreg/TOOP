@@ -4,3 +4,9 @@ api.mustache:
 
 apiController.mustache
 * Basically removed everything...
+
+model.mustache
+* Added import for JsonIgnoreProperties
+
+pojo.mustache
+* @JsonIgnoreProperties

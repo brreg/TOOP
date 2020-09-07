@@ -1,8 +1,11 @@
 package no.brreg.toop;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.helger.commons.system.SystemProperties;
 import com.helger.phase4.mgr.MetaAS4Manager;
 import com.helger.web.scope.mgr.WebScopeManager;
+import com.mashape.unirest.http.ObjectMapper;
+import com.mashape.unirest.http.Unirest;
 import eu.toop.connector.app.TCInit;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
@@ -16,6 +19,7 @@ import org.springframework.context.event.EventListener;
 
 import javax.annotation.PreDestroy;
 import javax.servlet.ServletContext;
+import java.io.IOException;
 
 
 @SpringBootApplication
@@ -52,7 +56,33 @@ public class Application {
         WebScopeManager.onGlobalEnd();
     }
 
+    public static void initializeUnirestObjectMapper() {
+        //Initialize Unirest object mapper singleton
+        Unirest.setObjectMapper(new ObjectMapper() {
+            private com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+            @Override
+            public <T> T readValue(String value, Class<T> valueType) {
+                try {
+                    return jacksonObjectMapper.readValue(value, valueType);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public String writeValue(Object value) {
+                try {
+                    return jacksonObjectMapper.writeValueAsString(value);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+    }
+
     public static void main(String[] args) {
+        initializeUnirestObjectMapper();
         SpringApplication.run(Application.class, args);
     }
 
