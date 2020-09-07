@@ -187,20 +187,16 @@
                         <id>default</id>
                         <goals>
                             <goal>build</goal>
-                            <goal>push</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>tag</id>
-                        <goals>
                             <goal>tag</goal>
                         </goals>
+                        <configuration>
+                            <tag>latest</tag>
+                        </configuration>
                     </execution>
                 </executions>
                 <configuration>
                     <dockerfile>dockerfile</dockerfile>
                     <repository>${docker.registry}/${project.groupId}/${project.artifactId}</repository>
-                    <tag>latest</tag>
                     <finalName>${project.artifactId}</finalName>
                 </configuration>
             </plugin>

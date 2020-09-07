@@ -34,12 +34,15 @@
                         <id>default</id>
                         <goals>
                             <goal>build</goal>
+                            <goal>tag</goal>
                         </goals>
+                        <configuration>
+                            <tag>latest</tag>
+                        </configuration>
                     </execution>
                 </executions>
                 <configuration>
                     <repository>${docker.registry}/${project.groupId}/${project.artifactId}</repository>
-                    <tag>latest</tag>
                 </configuration>
             </plugin>
         </plugins>
