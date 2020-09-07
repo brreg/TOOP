@@ -43,7 +43,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <repository>${docker.registry}/${project.groupId}/${project.artifactId}</repository>
+                    <repository>${docker.registry}/toop/toop-smp</repository>
                 </configuration>
             </plugin>
         </plugins>

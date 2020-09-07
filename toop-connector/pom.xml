@@ -197,7 +197,7 @@
                 </executions>
                 <configuration>
                     <dockerfile>dockerfile</dockerfile>
-                    <repository>${docker.registry}/${project.groupId}/${project.artifactId}</repository>
+                    <repository>${docker.registry}/toop/toop-connector</repository>
                     <finalName>${project.artifactId}</finalName>
                 </configuration>
             </plugin>
