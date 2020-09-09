@@ -7,6 +7,6 @@ COPY target/classes/config/playground-truststore-v4.1.jks /config/
 COPY target/classes/config/toop-keystore.jks /config/
 
 #Properties files are added as OpenShift secrets
-ENV SMP_SERVER_CONFIG=/config/smp-server.properties
-ENV SMP_WEBAPP_CONFIG=/config/webapp.properties
-ENV DIRECTORY_CLIENT_CONFIG=/config/pd-client.properties
+ENV SMP_SERVER_CONFIG=/config-smp-server/smp-server.properties
+ENV SMP_WEBAPP_CONFIG=/config-webapp/webapp.properties
+ENV DIRECTORY_CLIENT_CONFIG=/config-pd-client/pd-client.properties
