@@ -13,4 +13,4 @@ USER spring:spring
 COPY --from=builder /target/dependency/BOOT-INF/lib /application/lib
 COPY --from=builder /target/dependency/BOOT-INF/classes /application
 COPY --from=builder /target/dependency/META-INF /application
-ENTRYPOINT ["java", "-cp" , "application:application/lib/*", "no.brreg.toop.Application"]
+ENTRYPOINT ["java", "-cp" , "/application:/application/lib/*", "no.brreg.toop.Application"]
