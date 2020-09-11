@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.info.Info;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -37,30 +36,21 @@ public class Application {
     private CountryCodeCache countryCodeCache;
 
     @Autowired
+    private BrregIncomingHandler brregIncomingHandler;
+
+    @Autowired
     private ServletContext servletContext;
-
-    @Value("${toop.mem.implementation}")
-    private String toopMemImplementation;
-
-    @Value("${toop.mem.incoming.url}")
-    private String toopMemIncomingUrl;
-
-    @Value("${toop.dsd.service.baseurl}")
-    private String toopDsdServiceBaseurl;
 
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeAplication() {
-        LOGGER.info("toop.mem.implementation : " + toopMemImplementation);
-        LOGGER.info("toop.mem.incoming.url   : " + toopMemIncomingUrl);
-        LOGGER.info("toop.dsd.service.baseurl: " + toopDsdServiceBaseurl);
         initializeToopConnector();
         countryCodeCache.update();
     }
     private void initializeToopConnector() {
         SystemProperties.setPropertyValue(MetaAS4Manager.SYSTEM_PROPERTY_PHASE4_MANAGER_INMEMORY, true);
         WebScopeManager.onGlobalBegin(servletContext);
-        TCInit.initGlobally(servletContext, null);
+        TCInit.initGlobally(servletContext, brregIncomingHandler);
     }
 
     @PreDestroy
