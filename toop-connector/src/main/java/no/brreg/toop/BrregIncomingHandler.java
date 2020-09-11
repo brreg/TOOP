@@ -5,6 +5,8 @@ import com.helger.peppolid.IDocumentTypeIdentifier;
 import com.helger.peppolid.IProcessIdentifier;
 import com.helger.peppolid.factory.SimpleIdentifierFactory;
 import com.helger.xsds.bdxr.smp1.EndpointType;
+import eu.toop.commons.codelist.EPredefinedDocumentTypeIdentifier;
+import eu.toop.commons.codelist.EPredefinedProcessIdentifier;
 import eu.toop.connector.api.me.incoming.*;
 import eu.toop.connector.api.me.model.MEMessage;
 import eu.toop.connector.api.me.model.MEPayload;
@@ -81,12 +83,10 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         }
 
         //Query for SMP Endpoint
-        final IDocumentTypeIdentifier docTypeID = SimpleIdentifierFactory.INSTANCE.createDocumentTypeIdentifierWithDefaultScheme("");
-        final IProcessIdentifier processID = SimpleIdentifierFactory.INSTANCE.createProcessIdentifierWithDefaultScheme("");
         final String transportProtocol = ESMPTransportProfile.TRANSPORT_PROFILE_BDXR_AS4.getID();
         EndpointType endpointType = TCAPIHelper.querySMPEndpoint(incomingEDMRequest.getMetadata().getSenderID(),
-                docTypeID,
-                processID,
+                EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
+                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
                 transportProtocol);
 
         //Did we find an endpoint?
@@ -108,8 +108,8 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         //Create routing information
         MERoutingInformation meRoutingInformation = new MERoutingInformation(incomingEDMRequest.getMetadata().getReceiverID(),
                 incomingEDMRequest.getMetadata().getSenderID(),
-                docTypeID,
-                processID,
+                EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
+                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
                 transportProtocol,
                 endpointType.getEndpointURI(),
                 certificate);
@@ -117,10 +117,9 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         //Create message
         MEMessage meMessage = MEMessage.builder().senderID(incomingEDMRequest.getMetadata().getReceiverID())
                                                  .receiverID(incomingEDMRequest.getMetadata().getSenderID())
-                                                 .docTypeID(docTypeID)
-                                                 .processID(processID)
+                                                 .docTypeID(EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0)
+                                                 .processID(EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY)
                                                  .payload(payloadBuilder).build();
-
         //Send message
         try {
             TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
