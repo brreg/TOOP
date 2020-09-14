@@ -3,7 +3,7 @@ info:
   title: TOOP
   version: '2.0.0'
 servers:
-  - url: 'https://toop.brreg.no/'
+  - url: 'https://toop-connector.brreg.no/'
 paths:
   /query:
     get:
