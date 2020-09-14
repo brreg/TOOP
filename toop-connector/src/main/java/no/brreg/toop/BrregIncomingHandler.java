@@ -1,15 +1,11 @@
 package no.brreg.toop;
 
 import com.helger.peppol.smp.ESMPTransportProfile;
-import com.helger.peppolid.IDocumentTypeIdentifier;
-import com.helger.peppolid.IProcessIdentifier;
-import com.helger.peppolid.factory.SimpleIdentifierFactory;
 import com.helger.xsds.bdxr.smp1.EndpointType;
 import eu.toop.commons.codelist.EPredefinedDocumentTypeIdentifier;
 import eu.toop.commons.codelist.EPredefinedProcessIdentifier;
 import eu.toop.connector.api.me.incoming.*;
 import eu.toop.connector.api.me.model.MEMessage;
-import eu.toop.connector.api.me.model.MEPayload;
 import eu.toop.connector.api.me.outgoing.MEOutgoingException;
 import eu.toop.connector.api.me.outgoing.MERoutingInformation;
 import eu.toop.connector.app.api.TCAPIHelper;
@@ -32,6 +28,8 @@ import java.io.InputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 
@@ -53,11 +51,6 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             return;
         }
 
-        //Fetch enhet from enhetsregisteret ( "Finn foretak/selskap" on https://www.brreg.no/ )
-        String[] legalIdParts = edmRequest.getDataSubjectLegalPerson().getLegalID().split("/");
-        String orgno = legalIdParts[legalIdParts.length-1];
-        Enhet enhet = enhetsregisterCache.getEnhet(orgno);
-
         //Is the request in a structure we support?
         IEDMRequestPayloadConcepts requestConcepts = (IEDMRequestPayloadConcepts) edmRequest.getPayloadProvider();
         List<ConceptPojo> concepts = requestConcepts.concepts();
@@ -73,13 +66,87 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             return;
         }
 
+        //Fetch enhet from enhetsregisteret ( "Finn foretak/selskap" on https://www.brreg.no/ )
+        LOGGER.info("Got incoming request for {}", edmRequest.getDataSubjectLegalPerson().getLegalID());
+        String[] legalIdParts = edmRequest.getDataSubjectLegalPerson().getLegalID().split("/");
+        String orgno = legalIdParts[legalIdParts.length-1];
+        Enhet enhet = enhetsregisterCache.getEnhet(orgno);
+
         //Build response
-        MEPayload.Builder payloadBuilder = MEPayload.builder();
-        for (ConceptPojo conceptRequest : registeredOrganizationConceptRequest.children()) {
-            if (conceptRequest == null) {
-                continue;
+        final EDMResponse.BuilderConcept edmResponseBuilder = EDMResponse.builderConcept();
+        if (enhet != null) {
+            for (ConceptPojo conceptRequest : registeredOrganizationConceptRequest.children()) {
+                if (conceptRequest == null) {
+                    continue;
+                }
+
+                ConceptPojo.Builder conceptPojoBuilder = null;
+                if (EToopConcept.COMPANY_NAME.getAsQName().equals(conceptRequest.getName()) &&
+                    enhet.getNavn()!=null) {
+                    conceptPojoBuilder = ConceptPojo.builder()
+                        .name(EToopConcept.COMPANY_NAME)
+                        .valueText(enhet.getNavn());
+                } else if (EToopConcept.COMPANY_TYPE.getAsQName().equals(conceptRequest.getName()) &&
+                           enhet.getOrganisasjonsform()!=null && enhet.getOrganisasjonsform().getKode()!=null) {
+                    conceptPojoBuilder = ConceptPojo.builder()
+                        .name(EToopConcept.COMPANY_TYPE)
+                        .valueText(enhet.getOrganisasjonsform().getKode());
+                } else if (EToopConcept.REGISTRATION_DATE.getAsQName().equals(conceptRequest.getName()) &&
+                           enhet.getRegistreringsdatoEnhetsregisteret()!=null) {
+                    conceptPojoBuilder = ConceptPojo.builder()
+                        .name(EToopConcept.REGISTRATION_DATE)
+                        .valueDate(LocalDate.parse(enhet.getRegistreringsdatoEnhetsregisteret(), DateTimeFormatter.ofPattern("YYYY-MM-dd")));
+                } else if (EToopConcept.COMPANY_CODE.getAsQName().equals(conceptRequest.getName()) &&
+                           enhet.getOrganisasjonsnummer()!=null) {
+                    conceptPojoBuilder = ConceptPojo.builder()
+                        .name(EToopConcept.COMPANY_CODE)
+                        .valueText(enhet.getOrganisasjonsnummer());
+                } else if (EToopConcept.VAT_NUMBER.getAsQName().equals(conceptRequest.getName()) &&
+                        enhet.getOrganisasjonsnummer()!=null &&
+                        enhet.getRegistrertIMvaregisteret()!=null && enhet.getRegistrertIMvaregisteret().booleanValue()==true) {
+                    conceptPojoBuilder = ConceptPojo.builder()
+                            .name(EToopConcept.VAT_NUMBER)
+                            .valueText(enhet.getOrganisasjonsnummer()+"MVA");
+                } else if (EToopConcept.FOUNDATION_DATE.getAsQName().equals(conceptRequest.getName()) &&
+                        enhet.getStiftelsedato()!=null) {
+                    conceptPojoBuilder = ConceptPojo.builder()
+                        .name(EToopConcept.FOUNDATION_DATE)
+                        .valueDate(LocalDate.parse(enhet.getStiftelsedato(), DateTimeFormatter.ofPattern("YYYY-MM-dd")));
+                } else if (EToopConcept.NACE_CODE.getAsQName().equals(conceptRequest.getName()) &&
+                        enhet.getNaeringskode1()!=null && enhet.getNaeringskode1().getKode()!=null) {
+                    conceptPojoBuilder = ConceptPojo.builder()
+                        .name(EToopConcept.NACE_CODE)
+                        .valueText(enhet.getNaeringskode1().getKode());
+                }
+                //TODO
+
+                if (conceptPojoBuilder != null) {
+                    edmResponseBuilder.addConcept(conceptPojoBuilder.id(conceptRequest.getID()).build());
+                }
+
+    /*
+        ACTIVITY_DESCRIPTION("ActivityDescription"),
+        BIRTH_DATE("LegalRepresentativeBirthDate"),
+        CAPTIAL_TYPE("CapitalType"),
+        COUNTRY_NAME("CountryName"),
+        EMAIL_ADDRESS("EmailAddress"),
+        FAMILY_NAME("LegalRepresentativeFamilyName"),
+        FAX_NUMBER("FaxNumber"),
+        GIVEN_NAME("LegalRepresentativeGivenName"),
+        HAS_LEGAL_REPRESENTATIVE("HasLegalRepresentative"),
+        LEGAL_STATUS("LegalStatus"),
+        LEGAL_STATUS_EFFECTIVE_DATE("LegalStatusEffectiveDate"),
+        LOCALITY("Locality"),
+        PERSON("Person"),
+        POSTAL_CODE("PostalCode"),
+        REGION("Region"),
+        REGISTERED_ORGANIZATION("RegisteredOrganization"),
+        REGISTRATION_NUMBER("RegistrationNumber"),
+        SOCIAL_SEC_NUMBER("SSNumber"),
+        STREET_ADDRESS("StreetAddress"),
+        TELEPHONE_NUMBER("TelephoneNumber"),
+     */
             }
-            //TODO
         }
 
         //Query for SMP Endpoint
@@ -119,7 +186,11 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                                                  .receiverID(incomingEDMRequest.getMetadata().getSenderID())
                                                  .docTypeID(EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0)
                                                  .processID(EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY)
-                                                 .payload(payloadBuilder).build();
+                                                 .addPayload(x -> x.mimeTypeRegRep()
+                                                                   .randomContentID()
+                                                                   .data(edmResponseBuilder.build().getWriter().getAsBytes()))
+                                                 .build();
+
         //Send message
         try {
             TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
