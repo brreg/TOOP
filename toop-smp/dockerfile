@@ -9,4 +9,4 @@ COPY target/classes/config/toop-keystore.jks /config/
 #Properties files are added as OpenShift secrets
 ENV SMP_SERVER_CONFIG=/config-smp-server/smp-server.properties
 ENV SMP_WEBAPP_CONFIG=/config-webapp/webapp.properties
-ENV CONFIG_FILE=/config-pd-client/pd-client.properties
+ENV DIRECTORY_CLIENT_CONFIG=/config-pd-client/pd-client.properties
