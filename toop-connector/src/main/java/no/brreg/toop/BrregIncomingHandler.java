@@ -67,6 +67,12 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         }
 
         //Fetch enhet from enhetsregisteret ( "Finn foretak/selskap" on https://www.brreg.no/ )
+        if (edmRequest.getDataSubjectLegalPerson()==null ||
+            edmRequest.getDataSubjectLegalPerson().getLegalID()==null ||
+            edmRequest.getDataSubjectLegalPerson().getLegalID().isEmpty()) {
+            LOGGER.info("Request is missing LegalPerson");
+            return;
+        }
         LOGGER.info("Got incoming request for {}", edmRequest.getDataSubjectLegalPerson().getLegalID());
         String[] legalIdParts = edmRequest.getDataSubjectLegalPerson().getLegalID().split("/");
         String orgno = legalIdParts[legalIdParts.length-1];
@@ -81,16 +87,12 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 }
 
                 ConceptPojo.Builder conceptPojoBuilder = null;
+                //Enhet
                 if (EToopConcept.COMPANY_NAME.getAsQName().equals(conceptRequest.getName()) &&
                     enhet.getNavn()!=null) {
                     conceptPojoBuilder = ConceptPojo.builder()
                         .name(EToopConcept.COMPANY_NAME)
                         .valueText(enhet.getNavn());
-                } else if (EToopConcept.COMPANY_TYPE.getAsQName().equals(conceptRequest.getName()) &&
-                           enhet.getOrganisasjonsform()!=null && enhet.getOrganisasjonsform().getKode()!=null) {
-                    conceptPojoBuilder = ConceptPojo.builder()
-                        .name(EToopConcept.COMPANY_TYPE)
-                        .valueText(enhet.getOrganisasjonsform().getKode());
                 } else if (EToopConcept.REGISTRATION_DATE.getAsQName().equals(conceptRequest.getName()) &&
                            enhet.getRegistreringsdatoEnhetsregisteret()!=null) {
                     conceptPojoBuilder = ConceptPojo.builder()
@@ -112,40 +114,73 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                     conceptPojoBuilder = ConceptPojo.builder()
                         .name(EToopConcept.FOUNDATION_DATE)
                         .valueDate(LocalDate.parse(enhet.getStiftelsedato(), DateTimeFormatter.ofPattern("YYYY-MM-dd")));
-                } else if (EToopConcept.NACE_CODE.getAsQName().equals(conceptRequest.getName()) &&
-                        enhet.getNaeringskode1()!=null && enhet.getNaeringskode1().getKode()!=null) {
-                    conceptPojoBuilder = ConceptPojo.builder()
-                        .name(EToopConcept.NACE_CODE)
-                        .valueText(enhet.getNaeringskode1().getKode());
                 }
-                //TODO
+
+                //Enhet.Organisasjonsform
+                if (enhet.getOrganisasjonsform() != null) {
+                    if (EToopConcept.COMPANY_TYPE.getAsQName().equals(conceptRequest.getName()) &&
+                        enhet.getOrganisasjonsform() != null && enhet.getOrganisasjonsform().getKode() != null) {
+                        conceptPojoBuilder = ConceptPojo.builder()
+                            .name(EToopConcept.COMPANY_TYPE)
+                            .valueText(enhet.getOrganisasjonsform().getKode());
+                    }
+                }
+
+                //Enhet.Forretningsadresse
+                if (enhet.getForretningsadresse() != null) {
+                    if (EToopConcept.COUNTRY_NAME.getAsQName().equals(conceptRequest.getName()) &&
+                            enhet.getForretningsadresse().getLandkode()!=null) {
+                        conceptPojoBuilder = ConceptPojo.builder()
+                            .name(EToopConcept.COUNTRY_NAME)
+                            .valueText(enhet.getForretningsadresse().getLandkode());
+                    } else if (EToopConcept.POSTAL_CODE.getAsQName().equals(conceptRequest.getName()) &&
+                            (enhet.getForretningsadresse().getPostnummer()!=null || enhet.getForretningsadresse().getPoststed()!=null)) {
+                        StringBuilder sb = new StringBuilder();
+                        if (enhet.getForretningsadresse().getPostnummer()!=null) {
+                            sb.append(enhet.getForretningsadresse().getPostnummer());
+                        }
+                        if (enhet.getForretningsadresse().getPoststed()!=null) {
+                            if (sb.length()>0) {
+                                sb.append(' ');
+                            }
+                            sb.append(enhet.getForretningsadresse().getPoststed());
+                        }
+                        conceptPojoBuilder = ConceptPojo.builder()
+                            .name(EToopConcept.POSTAL_CODE)
+                            .valueText(sb.toString());
+                    } else if (EToopConcept.REGION.getAsQName().equals(conceptRequest.getName()) &&
+                               enhet.getForretningsadresse().getKommune()!=null) {
+                        conceptPojoBuilder = ConceptPojo.builder()
+                                .name(EToopConcept.REGION)
+                                .valueText(enhet.getForretningsadresse().getKommune());
+                    } else if (EToopConcept.STREET_ADDRESS.getAsQName().equals(conceptRequest.getName()) &&
+                               enhet.getForretningsadresse().getAdresse()!=null) {
+                        StringBuilder sb = new StringBuilder();
+                        for (String adresselinje : enhet.getForretningsadresse().getAdresse()) {
+                            if (sb.length()>0) {
+                                sb.append('\n');
+                            }
+                            sb.append(adresselinje);
+                        }
+                        conceptPojoBuilder = ConceptPojo.builder()
+                                .name(EToopConcept.STREET_ADDRESS)
+                                .valueText(sb.toString());
+                    }
+                }
+
+                //Enhet.Næringskode1
+                if (enhet.getNaeringskode1() != null) {
+                    if (EToopConcept.NACE_CODE.getAsQName().equals(conceptRequest.getName()) &&
+                        enhet.getNaeringskode1()!=null && enhet.getNaeringskode1().getKode()!=null) {
+                        conceptPojoBuilder = ConceptPojo.builder()
+                            .name(EToopConcept.NACE_CODE)
+                            .valueText(enhet.getNaeringskode1().getKode());
+                    }
+                }
 
                 if (conceptPojoBuilder != null) {
                     edmResponseBuilder.addConcept(conceptPojoBuilder.id(conceptRequest.getID()).build());
                 }
-
-    /*
-        ACTIVITY_DESCRIPTION("ActivityDescription"),
-        BIRTH_DATE("LegalRepresentativeBirthDate"),
-        CAPTIAL_TYPE("CapitalType"),
-        COUNTRY_NAME("CountryName"),
-        EMAIL_ADDRESS("EmailAddress"),
-        FAMILY_NAME("LegalRepresentativeFamilyName"),
-        FAX_NUMBER("FaxNumber"),
-        GIVEN_NAME("LegalRepresentativeGivenName"),
-        HAS_LEGAL_REPRESENTATIVE("HasLegalRepresentative"),
-        LEGAL_STATUS("LegalStatus"),
-        LEGAL_STATUS_EFFECTIVE_DATE("LegalStatusEffectiveDate"),
-        LOCALITY("Locality"),
-        PERSON("Person"),
-        POSTAL_CODE("PostalCode"),
-        REGION("Region"),
-        REGISTERED_ORGANIZATION("RegisteredOrganization"),
-        REGISTRATION_NUMBER("RegistrationNumber"),
-        SOCIAL_SEC_NUMBER("SSNumber"),
-        STREET_ADDRESS("StreetAddress"),
-        TELEPHONE_NUMBER("TelephoneNumber"),
-     */
             }
         }
 
