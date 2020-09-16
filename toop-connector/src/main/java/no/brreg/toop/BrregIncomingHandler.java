@@ -12,9 +12,11 @@ import eu.toop.connector.app.api.TCAPIHelper;
 import eu.toop.edm.EDMErrorResponse;
 import eu.toop.edm.EDMRequest;
 import eu.toop.edm.EDMResponse;
+import eu.toop.edm.model.AgentPojo;
 import eu.toop.edm.model.ConceptPojo;
 import eu.toop.edm.pilot.gbm.EToopConcept;
 import eu.toop.edm.request.IEDMRequestPayloadConcepts;
+import eu.toop.regrep.ERegRepResponseStatus;
 import no.brreg.toop.generated.model.Enhet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,7 +99,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                            enhet.getRegistreringsdatoEnhetsregisteret()!=null) {
                     conceptPojoBuilder = ConceptPojo.builder()
                         .name(EToopConcept.REGISTRATION_DATE)
-                        .valueDate(LocalDate.parse(enhet.getRegistreringsdatoEnhetsregisteret(), DateTimeFormatter.ofPattern("YYYY-MM-dd")));
+                        .valueDate(LocalDate.parse(enhet.getRegistreringsdatoEnhetsregisteret(), DateTimeFormatter.ofPattern("uuuu-MM-dd")));
                 } else if (EToopConcept.COMPANY_CODE.getAsQName().equals(conceptRequest.getName()) &&
                            enhet.getOrganisasjonsnummer()!=null) {
                     conceptPojoBuilder = ConceptPojo.builder()
@@ -113,7 +115,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                         enhet.getStiftelsedato()!=null) {
                     conceptPojoBuilder = ConceptPojo.builder()
                         .name(EToopConcept.FOUNDATION_DATE)
-                        .valueDate(LocalDate.parse(enhet.getStiftelsedato(), DateTimeFormatter.ofPattern("YYYY-MM-dd")));
+                        .valueDate(LocalDate.parse(enhet.getStiftelsedato(), DateTimeFormatter.ofPattern("uuuu-MM-dd")));
                 }
 
                 //Enhet.Organisasjonsform
@@ -217,6 +219,11 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 certificate);
 
         //Create message
+        edmResponseBuilder.requestID(edmRequest.getRequestID())
+                          .dataProvider(AgentPojo.builder().id("974760673").name("Brønnøysund Register Centre").build())
+                          .issueDateTimeNow()
+                          .responseStatus(ERegRepResponseStatus.SUCCESS);
+
         MEMessage meMessage = MEMessage.builder().senderID(incomingEDMRequest.getMetadata().getReceiverID())
                                                  .receiverID(incomingEDMRequest.getMetadata().getSenderID())
                                                  .docTypeID(EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0)
