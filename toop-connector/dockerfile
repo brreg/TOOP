@@ -14,4 +14,5 @@ COPY --from=builder /target/dependency/BOOT-INF/lib /application/lib
 COPY --from=builder /target/dependency/BOOT-INF/classes /application
 COPY --from=builder /target/dependency/META-INF /application
 ENV CONFIG_FILE=/application/config/application.properties
+ENV SMP_CLIENT_CONFIG=/config-smp-client/smp-client.properties
 ENTRYPOINT ["java", "-cp" , "/application:/application/lib/*", "no.brreg.toop.Application"]

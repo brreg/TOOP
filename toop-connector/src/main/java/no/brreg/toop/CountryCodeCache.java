@@ -1,5 +1,7 @@
 package no.brreg.toop;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -12,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 public class CountryCodeCache {
+    private static Logger LOGGER = LoggerFactory.getLogger(CountryCodeCache.class);
 
     private LocalDateTime cacheTime = null;
     private static final TemporalAmount CACHE_VALID_DURATION = Duration.ofHours(12);
@@ -22,6 +25,7 @@ public class CountryCodeCache {
 
 
     public void update() {
+        LOGGER.info("Updating CountryCode cache");
         if (cacheTime!=null && cacheTime.plus(CACHE_VALID_DURATION).isAfter(LocalDateTime.now())) {
             return; //Cache is still valid
         }

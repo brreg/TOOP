@@ -7,6 +7,7 @@ import com.helger.web.scope.mgr.WebScopeManager;
 import com.mashape.unirest.http.ObjectMapper;
 import com.mashape.unirest.http.Unirest;
 import eu.toop.connector.app.TCInit;
+import eu.toop.connector.mem.phase4.servlet.AS4ReceiveServlet;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
 import org.slf4j.Logger;
@@ -14,8 +15,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 
 import javax.annotation.PreDestroy;
 import javax.servlet.ServletContext;
@@ -23,6 +25,7 @@ import java.io.IOException;
 
 
 @SpringBootApplication
+@ComponentScan(basePackages = {"no.brreg.toop", "eu.toop.connector.mem.phase4.servlet"})
 @OpenAPIDefinition(
         info = @Info(
                 title = "BRREG TOOP",
@@ -41,13 +44,21 @@ public class Application {
     @Autowired
     private ServletContext servletContext;
 
+    @Bean
+    public ServletRegistrationBean as4Bean() {
+        initializeApplication();
+        LOGGER.info("registering phase4 bean");
+        ServletRegistrationBean bean = new ServletRegistrationBean(new AS4ReceiveServlet(), "/phase4");
+        bean.setLoadOnStartup(1);
+        return bean;
+    }
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void initializeAplication() {
+    public void initializeApplication() {
         initializeToopConnector();
         countryCodeCache.update();
     }
     private void initializeToopConnector() {
+        LOGGER.info("Initializing toop connector");
         SystemProperties.setPropertyValue(MetaAS4Manager.SYSTEM_PROPERTY_PHASE4_MANAGER_INMEMORY, true);
         WebScopeManager.onGlobalBegin(servletContext);
         TCInit.initGlobally(servletContext, brregIncomingHandler);
