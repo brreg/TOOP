@@ -6,14 +6,18 @@ import eu.toop.commons.codelist.EPredefinedDocumentTypeIdentifier;
 import eu.toop.commons.codelist.EPredefinedProcessIdentifier;
 import eu.toop.connector.api.me.incoming.*;
 import eu.toop.connector.api.me.model.MEMessage;
+import eu.toop.connector.api.me.model.MEPayload;
 import eu.toop.connector.api.me.outgoing.MEOutgoingException;
 import eu.toop.connector.api.me.outgoing.MERoutingInformation;
 import eu.toop.connector.app.api.TCAPIHelper;
+import eu.toop.edm.CToopEDM;
 import eu.toop.edm.EDMErrorResponse;
 import eu.toop.edm.EDMRequest;
 import eu.toop.edm.EDMResponse;
+import eu.toop.edm.model.AddressPojo;
 import eu.toop.edm.model.AgentPojo;
 import eu.toop.edm.model.ConceptPojo;
+import eu.toop.edm.model.EToopIdentifierType;
 import eu.toop.edm.pilot.gbm.EToopConcept;
 import eu.toop.edm.request.IEDMRequestPayloadConcepts;
 import eu.toop.regrep.ERegRepResponseStatus;
@@ -27,6 +31,7 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -45,26 +50,26 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
     @Override
     public void handleIncomingRequest(@Nonnull IncomingEDMRequest incomingEDMRequest) throws MEIncomingException {
-        EDMRequest edmRequest = incomingEDMRequest.getRequest();
+        final EDMRequest edmRequest = incomingEDMRequest.getRequest();
 
         //Is this a request we support?
         if (!(edmRequest.getPayloadProvider() instanceof IEDMRequestPayloadConcepts)) {
-            LOGGER.info("Cannot create TOOP response for DocumentRequest ({})", edmRequest.getPayloadProvider().getClass().getSimpleName());
+            LOGGER.error("Cannot create TOOP response for DocumentRequest ({})", edmRequest.getPayloadProvider().getClass().getSimpleName());
             return;
         }
 
         //Is the request in a structure we support?
-        IEDMRequestPayloadConcepts requestConcepts = (IEDMRequestPayloadConcepts) edmRequest.getPayloadProvider();
-        List<ConceptPojo> concepts = requestConcepts.concepts();
+        final IEDMRequestPayloadConcepts requestConcepts = (IEDMRequestPayloadConcepts) edmRequest.getPayloadProvider();
+        final List<ConceptPojo> concepts = requestConcepts.concepts();
         if (concepts.size() != 1) {
-            LOGGER.info("Expected exactly one top-level request concept. Got {}", concepts.size());
+            LOGGER.error("Expected exactly one top-level request concept. Got {}", concepts.size());
             return;
         }
 
         //Is this a request for REGISTERED_ORGANIZATION?
-        ConceptPojo registeredOrganizationConceptRequest = concepts.get(0);
+        final ConceptPojo registeredOrganizationConceptRequest = concepts.get(0);
         if (!registeredOrganizationConceptRequest.getName().equals(EToopConcept.REGISTERED_ORGANIZATION.getAsQName())) {
-            LOGGER.info("Expected top-level request concept {}. Got {}", EToopConcept.REGISTERED_ORGANIZATION.getAsQName(), registeredOrganizationConceptRequest.getName());
+            LOGGER.error("Expected top-level request concept {}. Got {}", EToopConcept.REGISTERED_ORGANIZATION.getAsQName(), registeredOrganizationConceptRequest.getName());
             return;
         }
 
@@ -72,48 +77,51 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         if (edmRequest.getDataSubjectLegalPerson()==null ||
             edmRequest.getDataSubjectLegalPerson().getLegalID()==null ||
             edmRequest.getDataSubjectLegalPerson().getLegalID().isEmpty()) {
-            LOGGER.info("Request is missing LegalPerson");
+            LOGGER.error("Request is missing LegalPerson");
             return;
         }
         LOGGER.info("Got incoming request for {}", edmRequest.getDataSubjectLegalPerson().getLegalID());
-        String[] legalIdParts = edmRequest.getDataSubjectLegalPerson().getLegalID().split("/");
-        String orgno = legalIdParts[legalIdParts.length-1];
-        Enhet enhet = enhetsregisterCache.getEnhet(orgno);
+        final String[] legalIdParts = edmRequest.getDataSubjectLegalPerson().getLegalID().split("/");
+        final String orgno = legalIdParts[legalIdParts.length-1];
+        final Enhet enhet = enhetsregisterCache.getEnhet(orgno);
 
-        //Build response
-        final EDMResponse.BuilderConcept edmResponseBuilder = EDMResponse.builderConcept();
+        //Build concepts response
+        final ConceptPojo.Builder conceptsBuilder = ConceptPojo.builder()
+                .randomID()
+                .name(EToopConcept.REGISTERED_ORGANIZATION);
+
         if (enhet != null) {
             for (ConceptPojo conceptRequest : registeredOrganizationConceptRequest.children()) {
                 if (conceptRequest == null) {
                     continue;
                 }
 
-                ConceptPojo.Builder conceptPojoBuilder = null;
+                ConceptPojo.Builder conceptBuilder = null;
                 //Enhet
                 if (EToopConcept.COMPANY_NAME.getAsQName().equals(conceptRequest.getName()) &&
                     enhet.getNavn()!=null) {
-                    conceptPojoBuilder = ConceptPojo.builder()
+                    conceptBuilder = ConceptPojo.builder()
                         .name(EToopConcept.COMPANY_NAME)
                         .valueText(enhet.getNavn());
                 } else if (EToopConcept.REGISTRATION_DATE.getAsQName().equals(conceptRequest.getName()) &&
                            enhet.getRegistreringsdatoEnhetsregisteret()!=null) {
-                    conceptPojoBuilder = ConceptPojo.builder()
+                    conceptBuilder = ConceptPojo.builder()
                         .name(EToopConcept.REGISTRATION_DATE)
                         .valueDate(LocalDate.parse(enhet.getRegistreringsdatoEnhetsregisteret(), DateTimeFormatter.ofPattern("uuuu-MM-dd")));
                 } else if (EToopConcept.COMPANY_CODE.getAsQName().equals(conceptRequest.getName()) &&
                            enhet.getOrganisasjonsnummer()!=null) {
-                    conceptPojoBuilder = ConceptPojo.builder()
+                    conceptBuilder = ConceptPojo.builder()
                         .name(EToopConcept.COMPANY_CODE)
                         .valueText(enhet.getOrganisasjonsnummer());
                 } else if (EToopConcept.VAT_NUMBER.getAsQName().equals(conceptRequest.getName()) &&
                         enhet.getOrganisasjonsnummer()!=null &&
                         enhet.getRegistrertIMvaregisteret()!=null && enhet.getRegistrertIMvaregisteret().booleanValue()==true) {
-                    conceptPojoBuilder = ConceptPojo.builder()
+                    conceptBuilder = ConceptPojo.builder()
                             .name(EToopConcept.VAT_NUMBER)
                             .valueText(enhet.getOrganisasjonsnummer()+"MVA");
                 } else if (EToopConcept.FOUNDATION_DATE.getAsQName().equals(conceptRequest.getName()) &&
                         enhet.getStiftelsedato()!=null) {
-                    conceptPojoBuilder = ConceptPojo.builder()
+                    conceptBuilder = ConceptPojo.builder()
                         .name(EToopConcept.FOUNDATION_DATE)
                         .valueDate(LocalDate.parse(enhet.getStiftelsedato(), DateTimeFormatter.ofPattern("uuuu-MM-dd")));
                 }
@@ -122,7 +130,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 if (enhet.getOrganisasjonsform() != null) {
                     if (EToopConcept.COMPANY_TYPE.getAsQName().equals(conceptRequest.getName()) &&
                         enhet.getOrganisasjonsform() != null && enhet.getOrganisasjonsform().getKode() != null) {
-                        conceptPojoBuilder = ConceptPojo.builder()
+                        conceptBuilder = ConceptPojo.builder()
                             .name(EToopConcept.COMPANY_TYPE)
                             .valueText(enhet.getOrganisasjonsform().getKode());
                     }
@@ -132,7 +140,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 if (enhet.getForretningsadresse() != null) {
                     if (EToopConcept.COUNTRY_NAME.getAsQName().equals(conceptRequest.getName()) &&
                             enhet.getForretningsadresse().getLandkode()!=null) {
-                        conceptPojoBuilder = ConceptPojo.builder()
+                        conceptBuilder = ConceptPojo.builder()
                             .name(EToopConcept.COUNTRY_NAME)
                             .valueText(enhet.getForretningsadresse().getLandkode());
                     } else if (EToopConcept.POSTAL_CODE.getAsQName().equals(conceptRequest.getName()) &&
@@ -147,12 +155,12 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                             }
                             sb.append(enhet.getForretningsadresse().getPoststed());
                         }
-                        conceptPojoBuilder = ConceptPojo.builder()
+                        conceptBuilder = ConceptPojo.builder()
                             .name(EToopConcept.POSTAL_CODE)
                             .valueText(sb.toString());
                     } else if (EToopConcept.REGION.getAsQName().equals(conceptRequest.getName()) &&
                                enhet.getForretningsadresse().getKommune()!=null) {
-                        conceptPojoBuilder = ConceptPojo.builder()
+                        conceptBuilder = ConceptPojo.builder()
                                 .name(EToopConcept.REGION)
                                 .valueText(enhet.getForretningsadresse().getKommune());
                     } else if (EToopConcept.STREET_ADDRESS.getAsQName().equals(conceptRequest.getName()) &&
@@ -164,7 +172,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                             }
                             sb.append(adresselinje);
                         }
-                        conceptPojoBuilder = ConceptPojo.builder()
+                        conceptBuilder = ConceptPojo.builder()
                                 .name(EToopConcept.STREET_ADDRESS)
                                 .valueText(sb.toString());
                     }
@@ -174,43 +182,44 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 if (enhet.getNaeringskode1() != null) {
                     if (EToopConcept.NACE_CODE.getAsQName().equals(conceptRequest.getName()) &&
                         enhet.getNaeringskode1()!=null && enhet.getNaeringskode1().getKode()!=null) {
-                        conceptPojoBuilder = ConceptPojo.builder()
+                        conceptBuilder = ConceptPojo.builder()
                             .name(EToopConcept.NACE_CODE)
                             .valueText(enhet.getNaeringskode1().getKode());
                     }
                 }
 
-                if (conceptPojoBuilder != null) {
-                    edmResponseBuilder.addConcept(conceptPojoBuilder.id(conceptRequest.getID()).build());
+                if (conceptBuilder != null) {
+                    conceptsBuilder.addChild(conceptBuilder.id(conceptRequest.getID()).build());
                 }
             }
         }
+        final EDMResponse.BuilderConcept edmResponseBuilder = EDMResponse.builderConcept().concept(conceptsBuilder.build());
 
         //Query for SMP Endpoint
         final String transportProtocol = ESMPTransportProfile.TRANSPORT_PROFILE_BDXR_AS4.getID();
-        EndpointType endpointType = TCAPIHelper.querySMPEndpoint(incomingEDMRequest.getMetadata().getSenderID(),
+        final EndpointType endpointType = TCAPIHelper.querySMPEndpoint(incomingEDMRequest.getMetadata().getSenderID(),
                 EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
                 EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
                 transportProtocol);
 
         //Did we find an endpoint?
         if (endpointType == null) {
-            LOGGER.info("SME lookup failed for {}", incomingEDMRequest.getMetadata().getSenderID().toString());
+            LOGGER.error("SME lookup failed for {}", incomingEDMRequest.getMetadata().getSenderID().toString());
             return;
         }
 
         //Create x509Certificate, we only have byte[]
-        X509Certificate certificate;
+        final X509Certificate certificate;
         try (InputStream is = new ByteArrayInputStream(endpointType.getCertificate())){
             CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
             certificate = (X509Certificate) certificateFactory.generateCertificate(is);
         } catch (CertificateException | IOException e) {
-            LOGGER.info("Failed to get CertificateFactory instance: " + e.getMessage());
+            LOGGER.error("Failed to get CertificateFactory instance: " + e.getMessage());
             return;
         }
 
         //Create routing information
-        MERoutingInformation meRoutingInformation = new MERoutingInformation(incomingEDMRequest.getMetadata().getReceiverID(),
+        final MERoutingInformation meRoutingInformation = new MERoutingInformation(incomingEDMRequest.getMetadata().getReceiverID(),
                 incomingEDMRequest.getMetadata().getSenderID(),
                 EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
                 EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
@@ -220,24 +229,40 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
         //Create message
         edmResponseBuilder.requestID(edmRequest.getRequestID())
-                          .dataProvider(AgentPojo.builder().id("974760673").name("Brønnøysund Register Centre").build())
+                          .dataProvider(AgentPojo.builder()
+                                                    .id("9999:norway2")
+                                                    .idSchemeID(EToopIdentifierType.EIDAS)
+                                                    .name("Brønnøysund Register Centre")
+                                                    .address(AddressPojo.builder()
+                                                            .fullAddress("Brønnøysundregistrene, Havnegata 48, 8900 Brønnøysund, Norway")
+                                                            .streetName("Havnegata 48")
+                                                            .postalCode("8910 Brønnøysund")
+                                                            .town("Brønnøysund")
+                                                            .countryCode("NO")
+                                                            .build())
+                                                    .build())
                           .issueDateTimeNow()
+                          .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
                           .responseStatus(ERegRepResponseStatus.SUCCESS);
 
-        MEMessage meMessage = MEMessage.builder().senderID(incomingEDMRequest.getMetadata().getReceiverID())
+        LOGGER.debug("edmResponseBuilder: " + new String(edmResponseBuilder.build().getWriter().getAsBytes(), StandardCharsets.UTF_8));
+
+        final MEMessage meMessage = MEMessage.builder().senderID(incomingEDMRequest.getMetadata().getReceiverID())
                                                  .receiverID(incomingEDMRequest.getMetadata().getSenderID())
                                                  .docTypeID(EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0)
                                                  .processID(EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY)
-                                                 .addPayload(x -> x.mimeTypeRegRep()
-                                                                   .randomContentID()
-                                                                   .data(edmResponseBuilder.build().getWriter().getAsBytes()))
+                                                 .payload(MEPayload.builder()
+                                                                .mimeTypeRegRep()
+                                                                .randomContentID()
+                                                                .data(edmResponseBuilder.build().getWriter().getAsBytes())
+                                                                .build())
                                                  .build();
 
         //Send message
         try {
             TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
         } catch (MEOutgoingException e) {
-            LOGGER.info("Got exception when sending AS4 message: " + e.getMessage());
+            LOGGER.error("Got exception when sending AS4 message: " + e.getMessage());
         }
     }
 
