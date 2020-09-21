@@ -54,7 +54,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
         //Is this a request we support?
         if (!(edmRequest.getPayloadProvider() instanceof IEDMRequestPayloadConcepts)) {
-            LOGGER.error("Cannot create TOOP response for DocumentRequest ({})", edmRequest.getPayloadProvider().getClass().getSimpleName());
+            sendIncomingRequestFailed("Cannot create TOOP response for DocumentRequest: "+edmRequest.getPayloadProvider().getClass().getSimpleName());
             return;
         }
 
@@ -62,14 +62,14 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         final IEDMRequestPayloadConcepts requestConcepts = (IEDMRequestPayloadConcepts) edmRequest.getPayloadProvider();
         final List<ConceptPojo> concepts = requestConcepts.concepts();
         if (concepts.size() != 1) {
-            LOGGER.error("Expected exactly one top-level request concept. Got {}", concepts.size());
+            sendIncomingRequestFailed("Expected exactly one top-level request concept. Got:  "+concepts.size());
             return;
         }
 
         //Is this a request for REGISTERED_ORGANIZATION?
         final ConceptPojo registeredOrganizationConceptRequest = concepts.get(0);
         if (!registeredOrganizationConceptRequest.getName().equals(EToopConcept.REGISTERED_ORGANIZATION.getAsQName())) {
-            LOGGER.error("Expected top-level request concept {}. Got {}", EToopConcept.REGISTERED_ORGANIZATION.getAsQName(), registeredOrganizationConceptRequest.getName());
+            sendIncomingRequestFailed("Expected top-level request concept "+EToopConcept.REGISTERED_ORGANIZATION.getAsQName()+". Got: "+registeredOrganizationConceptRequest.getName());
             return;
         }
 
@@ -77,7 +77,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         if (edmRequest.getDataSubjectLegalPerson()==null ||
             edmRequest.getDataSubjectLegalPerson().getLegalID()==null ||
             edmRequest.getDataSubjectLegalPerson().getLegalID().isEmpty()) {
-            LOGGER.error("Request is missing LegalPerson");
+            sendIncomingRequestFailed("Request is missing LegalPerson");
             return;
         }
         LOGGER.info("Got incoming request for {}", edmRequest.getDataSubjectLegalPerson().getLegalID());
@@ -204,7 +204,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
         //Did we find an endpoint?
         if (endpointType == null) {
-            LOGGER.error("SME lookup failed for {}", incomingEDMRequest.getMetadata().getSenderID().toString());
+            sendIncomingRequestFailed("SME lookup failed for "+incomingEDMRequest.getMetadata().getSenderID().toString());
             return;
         }
 
@@ -214,7 +214,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
             certificate = (X509Certificate) certificateFactory.generateCertificate(is);
         } catch (CertificateException | IOException e) {
-            LOGGER.error("Failed to get CertificateFactory instance: " + e.getMessage());
+            sendIncomingRequestFailed("Failed to get CertificateFactory instance: " + e.getMessage());
             return;
         }
 
@@ -262,7 +262,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         try {
             TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
         } catch (MEOutgoingException e) {
-            LOGGER.error("Got exception when sending AS4 message: " + e.getMessage());
+            sendIncomingRequestFailed("Got exception when sending AS4 message: "+e.getMessage());
         }
     }
 
@@ -275,4 +275,10 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     public void handleIncomingErrorResponse(@Nonnull IncomingEDMErrorResponse incomingEDMErrorResponse) throws MEIncomingException {
         EDMErrorResponse edmErrorResponse = incomingEDMErrorResponse.getErrorResponse();
     }
+
+    private void sendIncomingRequestFailed(final String errorMsg) {
+        LOGGER.error(errorMsg);
+        //TODO, send error response
+    }
+
 }
