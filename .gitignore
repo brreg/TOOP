@@ -2,3 +2,4 @@
 *.iml
 toop-connector/src/main/java/no/brreg/toop/generated/
 target/
+passwd
