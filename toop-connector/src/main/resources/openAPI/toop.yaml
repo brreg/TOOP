@@ -15,7 +15,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                type: array
+                items:
+                  type: string
   /query/{countrycode}/{orgno}:
     get:
       description: Query for a given orgno

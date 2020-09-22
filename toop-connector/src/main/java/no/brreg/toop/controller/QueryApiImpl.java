@@ -1,7 +1,9 @@
 package no.brreg.toop.controller;
 
+import no.brreg.toop.CountryCodeCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -18,13 +20,18 @@ import java.util.List;
 public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryApiImpl.class);
 
+    @Autowired
+    private CountryCodeCache countryCodeCache;
+
+
     @Override
-    public ResponseEntity<Object> getCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response) {
+    public ResponseEntity<List<String>> getCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response) {
         try {
-            if (true) {
+            List<String> countryCodes = countryCodeCache.getCountryCodes();
+            if (countryCodes==null || countryCodes.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {
-                return new ResponseEntity<>("toop", HttpStatus.OK);
+                return new ResponseEntity<>(countryCodes, HttpStatus.OK);
             }
         } catch (Exception e) {
             LOGGER.error("getCountryCodes failed: ", e);
