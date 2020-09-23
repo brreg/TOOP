@@ -21,7 +21,7 @@ paths:
   /query/{countrycode}/{orgno}:
     get:
       description: Query for a given orgno
-      operationId: getOrgno
+      operationId: getOrganization
       parameters:
         - name: countrycode
           in: path
@@ -41,9 +41,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                type: Enhet
 components:
   schemas:
     Enhet:

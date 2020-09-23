@@ -1,7 +1,10 @@
 package no.brreg.toop;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.helger.commons.collection.impl.CommonsArrayList;
 import com.helger.commons.system.SystemProperties;
+import com.helger.dns.dnsjava.DnsjavaInit;
+import com.helger.dns.ip.IPV4Addr;
 import com.helger.phase4.mgr.MetaAS4Manager;
 import com.helger.web.scope.mgr.WebScopeManager;
 import com.mashape.unirest.http.ObjectMapper;
@@ -60,6 +63,7 @@ public class Application {
     private void initializeToopConnector() {
         LOGGER.info("Initializing toop connector");
         SystemProperties.setPropertyValue(MetaAS4Manager.SYSTEM_PROPERTY_PHASE4_MANAGER_INMEMORY, true);
+        DnsjavaInit.initWithCustomDNSServers(new CommonsArrayList<>(IPV4Addr.getAsInetAddress (1, 1, 1, 1), IPV4Addr.getAsInetAddress (1, 0, 0, 1)));
         WebScopeManager.onGlobalBegin(servletContext);
         TCInit.initGlobally(servletContext, brregIncomingHandler);
     }

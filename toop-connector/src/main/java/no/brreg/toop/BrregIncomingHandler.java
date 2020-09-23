@@ -14,6 +14,7 @@ import eu.toop.edm.CToopEDM;
 import eu.toop.edm.EDMErrorResponse;
 import eu.toop.edm.EDMRequest;
 import eu.toop.edm.EDMResponse;
+import eu.toop.edm.error.*;
 import eu.toop.edm.model.AddressPojo;
 import eu.toop.edm.model.AgentPojo;
 import eu.toop.edm.model.ConceptPojo;
@@ -35,17 +36,48 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 
 @Component
 public class BrregIncomingHandler implements IMEIncomingHandler {
-    private static Logger LOGGER = LoggerFactory.getLogger(BrregIncomingHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BrregIncomingHandler.class);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
     @Autowired
     private EnhetsregisterCache enhetsregisterCache;
+
+    private class RequestCache {
+        private String id;
+        private Enhet enhet;
+        private Object requestLock;
+
+        public RequestCache(final String id) {
+            this.id = id;
+            this.requestLock = new Object();
+            this.enhet = null;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public Enhet getEnhet() {
+            return enhet;
+        }
+
+        public Object getRequestLock() {
+            return requestLock;
+        }
+    }
+    private Map<String,RequestCache> requestMap = new HashMap<>();
+    private static Object requestMapLock = new Object();
 
 
     @Override
@@ -84,13 +116,18 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         final String[] legalIdParts = edmRequest.getDataSubjectLegalPerson().getLegalID().split("/");
         final String orgno = legalIdParts[legalIdParts.length-1];
         final Enhet enhet = enhetsregisterCache.getEnhet(orgno);
+        final boolean isError = (enhet == null);
 
         //Build concepts response
         final ConceptPojo.Builder conceptsBuilder = ConceptPojo.builder()
                 .randomID()
                 .name(EToopConcept.REGISTERED_ORGANIZATION);
 
-        if (enhet != null) {
+        EDMResponse.BuilderConcept edmResponseBuilder2 = null;
+        EDMErrorResponse.Builder edmErrorResposeBuilder2 = null;
+        if (isError) {
+            edmErrorResposeBuilder2 = EDMErrorResponse.builder();
+        } else {
             for (ConceptPojo conceptRequest : registeredOrganizationConceptRequest.children()) {
                 if (conceptRequest == null) {
                     continue;
@@ -188,12 +225,16 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                     }
                 }
 
-                if (conceptBuilder != null) {
-                    conceptsBuilder.addChild(conceptBuilder.id(conceptRequest.getID()).build());
+                if (conceptBuilder == null) {
+                    conceptBuilder = ConceptPojo.builder()
+                            .name(conceptRequest.getName())
+                            .valueErrorCode(EToopDataElementResponseErrorCode.DP_ELE_001);
                 }
+
+                conceptsBuilder.addChild(conceptBuilder.id(conceptRequest.getID()).build());
             }
+            edmResponseBuilder2 = EDMResponse.builderConcept().concept(conceptsBuilder.build());
         }
-        final EDMResponse.BuilderConcept edmResponseBuilder = EDMResponse.builderConcept().concept(conceptsBuilder.build());
 
         //Query for SMP Endpoint
         final String transportProtocol = ESMPTransportProfile.TRANSPORT_PROFILE_BDXR_AS4.getID();
@@ -228,24 +269,54 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 certificate);
 
         //Create message
-        edmResponseBuilder.requestID(edmRequest.getRequestID())
-                          .dataProvider(AgentPojo.builder()
-                                                    .id("9999:norway2")
-                                                    .idSchemeID(EToopIdentifierType.EIDAS)
-                                                    .name("Brønnøysund Register Centre")
-                                                    .address(AddressPojo.builder()
-                                                            .fullAddress("Brønnøysundregistrene, Havnegata 48, 8900 Brønnøysund, Norway")
-                                                            .streetName("Havnegata 48")
-                                                            .postalCode("8910 Brønnøysund")
-                                                            .town("Brønnøysund")
-                                                            .countryCode("NO")
-                                                            .build())
-                                                    .build())
-                          .issueDateTimeNow()
-                          .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
-                          .responseStatus(ERegRepResponseStatus.SUCCESS);
+        byte[] dataBuf;
+        if (isError) {
+            edmErrorResposeBuilder2.requestID(edmRequest.getRequestID())
+                                   .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
+                                   .exception(EDMExceptionPojo.builder()
+                                                              .exceptionType(EEDMExceptionType.INVALID_REQUEST)
+                                                              .severityFailure()
+                                                              .errorMessage("Organization " + orgno + " not found")
+                                                              .errorOrigin(EToopErrorOrigin.RESPONSE_CREATION)
+                                                              .timestampNow()
+                                                              .build())
+                                   .errorProvider(AgentPojo.builder()
+                                           .id("9999:norway2")
+                                           .idSchemeID(EToopIdentifierType.EIDAS)
+                                           .name("Brønnøysund Register Centre")
+                                           .address(AddressPojo.builder()
+                                                   .fullAddress("Brønnøysundregistrene, Havnegata 48, 8900 Brønnøysund, Norway")
+                                                   .streetName("Havnegata 48")
+                                                   .postalCode("8910 Brønnøysund")
+                                                   .town("Brønnøysund")
+                                                   .countryCode("NO")
+                                                   .build())
+                                           .build())
+                                   .responseStatus(ERegRepResponseStatus.FAILURE);
 
-        LOGGER.debug("edmResponseBuilder: " + new String(edmResponseBuilder.build().getWriter().getAsBytes(), StandardCharsets.UTF_8));
+            dataBuf = edmErrorResposeBuilder2.build().getWriter().getAsBytes();
+            LOGGER.debug("edmErrorResposeBuilder2: " + new String(dataBuf, StandardCharsets.UTF_8));
+        } else {
+            edmResponseBuilder2.requestID(edmRequest.getRequestID())
+                               .dataProvider(AgentPojo.builder()
+                                    .id("9999:norway2")
+                                    .idSchemeID(EToopIdentifierType.EIDAS)
+                                    .name("Brønnøysund Register Centre")
+                                    .address(AddressPojo.builder()
+                                            .fullAddress("Brønnøysundregistrene, Havnegata 48, 8900 Brønnøysund, Norway")
+                                            .streetName("Havnegata 48")
+                                            .postalCode("8910 Brønnøysund")
+                                            .town("Brønnøysund")
+                                            .countryCode("NO")
+                                            .build())
+                                    .build())
+                                .issueDateTimeNow()
+                                .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
+                                .responseStatus(ERegRepResponseStatus.SUCCESS);
+
+            dataBuf = edmResponseBuilder2.build().getWriter().getAsBytes();
+            LOGGER.debug("edmResponseBuilder: " + new String(dataBuf, StandardCharsets.UTF_8));
+        }
 
         final MEMessage meMessage = MEMessage.builder().senderID(incomingEDMRequest.getMetadata().getReceiverID())
                                                  .receiverID(incomingEDMRequest.getMetadata().getSenderID())
@@ -254,11 +325,11 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                                                  .payload(MEPayload.builder()
                                                                 .mimeTypeRegRep()
                                                                 .randomContentID()
-                                                                .data(edmResponseBuilder.build().getWriter().getAsBytes())
+                                                                .data(dataBuf)
                                                                 .build())
                                                  .build();
 
-        //Send message
+        //Send response
         try {
             TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
         } catch (MEOutgoingException e) {
@@ -279,6 +350,31 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     private void sendIncomingRequestFailed(final String errorMsg) {
         LOGGER.error(errorMsg);
         //TODO, send error response
+    }
+
+    public Enhet getOrganization(final String countrycode, final String orgno) throws TimeoutException  {
+/*
+        //Send request
+        try {
+            TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
+        } catch (MEOutgoingException e) {
+            sendIncomingRequestFailed("Got exception when sending AS4 message: "+e.getMessage());
+        }
+*/
+        RequestCache requestCacheItem = new RequestCache("id");
+        try {
+            synchronized(requestMapLock) {
+                requestMap.put(requestCacheItem.getId(), requestCacheItem);
+            }
+            requestCacheItem.getRequestLock().wait(REQUEST_TIMEOUT.toMillis());
+            return requestCacheItem.getEnhet();
+        } catch (InterruptedException e) {
+            throw new TimeoutException();
+        } finally {
+            synchronized(requestMapLock) {
+                requestMap.remove(requestCacheItem.getId());
+            }
+        }
     }
 
 }
