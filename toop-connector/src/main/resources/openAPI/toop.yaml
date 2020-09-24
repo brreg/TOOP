@@ -18,10 +18,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CountryCode"
-  /query/{countrycode}/{orgno}:
+  /query/LP/{countrycode}/{legalperson}:
     get:
-      description: Query for a given orgno
-      operationId: getOrganization
+      description: Query for a given Legal Person
+      operationId: getByLegalPerson
       parameters:
         - name: countrycode
           in: path
@@ -29,10 +29,34 @@ paths:
           description: The orgno country code
           schema:
             type: string
-        - name: orgno
+        - name: legalperson
           in: path
           required: true
-          description: The orgno
+          description: ID for the legal person
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: Enhet
+  /query/NP/{countrycode}/{naturalperson}:
+    get:
+      description: Query for a given Natural Person
+      operationId: getByNaturalPerson
+      parameters:
+        - name: countrycode
+          in: path
+          required: true
+          description: The orgno country code
+          schema:
+            type: string
+        - name: naturalperson
+          in: path
+          required: true
+          description: ID for the natural person
           schema:
             type: string
       responses:
