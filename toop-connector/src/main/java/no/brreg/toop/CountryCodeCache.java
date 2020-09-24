@@ -1,5 +1,7 @@
 package no.brreg.toop;
 
+// This code is Public Domain. See LICENSE
+
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;

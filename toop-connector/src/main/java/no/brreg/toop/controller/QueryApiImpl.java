@@ -1,5 +1,7 @@
 package no.brreg.toop.controller;
 
+// This code is Public Domain. See LICENSE
+
 import no.brreg.toop.BrregIncomingHandler;
 import no.brreg.toop.CountryCodeCache;
 import no.brreg.toop.generated.model.CountryCode;

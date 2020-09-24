@@ -1,5 +1,7 @@
 package no.brreg.toop;
 
+// This code is Public Domain. See LICENSE
+
 import com.helger.peppol.smp.ESMPTransportProfile;
 import com.helger.xsds.bdxr.smp1.EndpointType;
 import eu.toop.commons.codelist.EPredefinedDocumentTypeIdentifier;

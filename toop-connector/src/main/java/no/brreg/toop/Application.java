@@ -1,5 +1,7 @@
 package no.brreg.toop;
 
+// This code is Public Domain. See LICENSE
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.helger.commons.collection.impl.CommonsArrayList;
 import com.helger.commons.system.SystemProperties;
