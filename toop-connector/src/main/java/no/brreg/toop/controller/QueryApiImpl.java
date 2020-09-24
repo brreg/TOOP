@@ -2,6 +2,7 @@ package no.brreg.toop.controller;
 
 import no.brreg.toop.BrregIncomingHandler;
 import no.brreg.toop.CountryCodeCache;
+import no.brreg.toop.generated.model.CountryCode;
 import no.brreg.toop.generated.model.Enhet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,9 +31,9 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
 
 
     @Override
-    public ResponseEntity<List<String>> getCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response) {
+    public ResponseEntity<List<CountryCode>> getCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response) {
         try {
-            List<String> countryCodes = countryCodeCache.getCountryCodes();
+            List<CountryCode> countryCodes = countryCodeCache.getCountryCodes();
             if (countryCodes==null || countryCodes.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {

@@ -17,7 +17,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: string
+                  $ref: "#/components/schemas/CountryCode"
   /query/{countrycode}/{orgno}:
     get:
       description: Query for a given orgno
@@ -149,4 +149,62 @@ components:
       type: object
       properties:
         href:
+          type: string
+    CountryCode:
+      type: object
+      properties:
+          id:
+            type: string
+          code:
+            type: string
+          name:
+            type: string
+    CountryCodeResult:
+      type: object
+      properties:
+        total-result-count:
+          type: integer
+        used-result-count:
+          type: integer
+        result-page-index:
+          type: integer
+        result-page-count:
+          type: integer
+        first-result-index:
+          type: integer
+        last-result-index:
+          type: integer
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountryCodeMatch"
+    CountryCodeMatch:
+      type: object
+      properties:
+        participantID:
+          $ref: "#/components/schemas/CountryCodeParticipant"
+        entities:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountryCodeParticipantEntity"
+    CountryCodeParticipant:
+      type: object
+      properties:
+        scheme:
+          type: string
+        value:
+          type: string
+    CountryCodeParticipantEntity:
+      type: object
+      properties:
+        name:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountryCodeParticipantEntityName"
+        countryCode:
+          type: string
+    CountryCodeParticipantEntityName:
+      type: object
+      properties:
+        name:
           type: string
