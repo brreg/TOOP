@@ -25,7 +25,7 @@ public class CountryCodeCache {
     private static Logger LOGGER = LoggerFactory.getLogger(CountryCodeCache.class);
 
     private static final String COUNTRY_LOOKUP = "https://directory.acc.exchange.toop.eu/search/1.0/json?doctype=toop-doctypeid-qns%3A%3ARegisteredOrganization%3A%3AREGISTERED_ORGANIZATION_TYPE%3A%3ACONCEPT%23%23CCCEV%3A%3Atoop-edm%3Av2.0";
-    private static final String COUNTRY_SCHEME = "iso6523-actorid-upis";
+    public static final String COUNTRY_SCHEME = "iso6523-actorid-upis";
 
     private LocalDateTime cacheTime = null;
     private static final TemporalAmount CACHE_VALID_DURATION = Duration.ofHours(12);
@@ -95,6 +95,12 @@ public class CountryCodeCache {
         update();
         synchronized(countryCodesLock) {
             return new ArrayList(countryCodes.values());
+        }
+    }
+
+    public CountryCode getCountryCode(final String country) {
+        synchronized(countryCodesLock) {
+            return countryCodes.get(country);
         }
     }
 

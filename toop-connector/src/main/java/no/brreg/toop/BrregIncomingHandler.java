@@ -3,6 +3,8 @@ package no.brreg.toop;
 // This code is Public Domain. See LICENSE
 
 import com.helger.peppol.smp.ESMPTransportProfile;
+import com.helger.peppolid.IParticipantIdentifier;
+import com.helger.peppolid.factory.SimpleIdentifierFactory;
 import com.helger.xsds.bdxr.smp1.EndpointType;
 import eu.toop.commons.codelist.EPredefinedDocumentTypeIdentifier;
 import eu.toop.commons.codelist.EPredefinedProcessIdentifier;
@@ -17,13 +19,11 @@ import eu.toop.edm.EDMErrorResponse;
 import eu.toop.edm.EDMRequest;
 import eu.toop.edm.EDMResponse;
 import eu.toop.edm.error.*;
-import eu.toop.edm.model.AddressPojo;
-import eu.toop.edm.model.AgentPojo;
-import eu.toop.edm.model.ConceptPojo;
-import eu.toop.edm.model.EToopIdentifierType;
+import eu.toop.edm.model.*;
 import eu.toop.edm.pilot.gbm.EToopConcept;
 import eu.toop.edm.request.IEDMRequestPayloadConcepts;
 import eu.toop.regrep.ERegRepResponseStatus;
+import no.brreg.toop.generated.model.CountryCode;
 import no.brreg.toop.generated.model.Enhet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,16 +51,20 @@ import java.util.concurrent.TimeoutException;
 public class BrregIncomingHandler implements IMEIncomingHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(BrregIncomingHandler.class);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+    private static final String NORWEGIAN_COUNTRYCODE = "NO";
 
     @Autowired
     private EnhetsregisterCache enhetsregisterCache;
 
-    private class RequestCache {
+    @Autowired
+    private CountryCodeCache countryCodeCache;
+
+    private class RequestCacheItem {
         private String id;
         private Enhet enhet;
         private Object requestLock;
 
-        public RequestCache(final String id) {
+        public RequestCacheItem(final String id) {
             this.id = id;
             this.requestLock = new Object();
             this.enhet = null;
@@ -77,8 +81,12 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         public Object getRequestLock() {
             return requestLock;
         }
+
+        public void setEnhet(final Enhet enhet) {
+            this.enhet = enhet;
+        }
     }
-    private Map<String,RequestCache> requestMap = new HashMap<>();
+    private Map<String, RequestCacheItem> requestMap = new HashMap<>();
     private static Object requestMapLock = new Object();
 
 
@@ -125,10 +133,10 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 .randomID()
                 .name(EToopConcept.REGISTERED_ORGANIZATION);
 
-        EDMResponse.BuilderConcept edmResponseBuilder2 = null;
-        EDMErrorResponse.Builder edmErrorResposeBuilder2 = null;
+        EDMResponse.BuilderConcept edmResponseBuilder = null;
+        EDMErrorResponse.Builder edmErrorResposeBuilder = null;
         if (isError) {
-            edmErrorResposeBuilder2 = EDMErrorResponse.builder();
+            edmErrorResposeBuilder = EDMErrorResponse.builder();
         } else {
             for (ConceptPojo conceptRequest : registeredOrganizationConceptRequest.children()) {
                 if (conceptRequest == null) {
@@ -235,45 +243,20 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
                 conceptsBuilder.addChild(conceptBuilder.id(conceptRequest.getID()).build());
             }
-            edmResponseBuilder2 = EDMResponse.builderConcept().concept(conceptsBuilder.build());
+            edmResponseBuilder = EDMResponse.builderConcept().concept(conceptsBuilder.build());
         }
 
-        //Query for SMP Endpoint
-        final String transportProtocol = ESMPTransportProfile.TRANSPORT_PROFILE_BDXR_AS4.getID();
-        final EndpointType endpointType = TCAPIHelper.querySMPEndpoint(incomingEDMRequest.getMetadata().getSenderID(),
-                EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
-                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
-                transportProtocol);
-
-        //Did we find an endpoint?
-        if (endpointType == null) {
-            sendIncomingRequestFailed("SME lookup failed for "+incomingEDMRequest.getMetadata().getSenderID().toString());
+        final MERoutingInformation meRoutingInformation = getRoutingInformation(incomingEDMRequest.getMetadata().getReceiverID() /* incoming receiver is now sender */,
+                                                                                incomingEDMRequest.getMetadata().getSenderID() /* incoming sender is now receiver */);
+        if (meRoutingInformation == null) {
+            sendIncomingRequestFailed("Failed to get RoutingInformation");
             return;
         }
-
-        //Create x509Certificate, we only have byte[]
-        final X509Certificate certificate;
-        try (InputStream is = new ByteArrayInputStream(endpointType.getCertificate())){
-            CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
-            certificate = (X509Certificate) certificateFactory.generateCertificate(is);
-        } catch (CertificateException | IOException e) {
-            sendIncomingRequestFailed("Failed to get CertificateFactory instance: " + e.getMessage());
-            return;
-        }
-
-        //Create routing information
-        final MERoutingInformation meRoutingInformation = new MERoutingInformation(incomingEDMRequest.getMetadata().getReceiverID(),
-                incomingEDMRequest.getMetadata().getSenderID(),
-                EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
-                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
-                transportProtocol,
-                endpointType.getEndpointURI(),
-                certificate);
 
         //Create message
         byte[] dataBuf;
         if (isError) {
-            edmErrorResposeBuilder2.requestID(edmRequest.getRequestID())
+            edmErrorResposeBuilder.requestID(edmRequest.getRequestID())
                                    .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
                                    .exception(EDMExceptionPojo.builder()
                                                               .exceptionType(EEDMExceptionType.INVALID_REQUEST)
@@ -296,27 +279,16 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                                            .build())
                                    .responseStatus(ERegRepResponseStatus.FAILURE);
 
-            dataBuf = edmErrorResposeBuilder2.build().getWriter().getAsBytes();
+            dataBuf = edmErrorResposeBuilder.build().getWriter().getAsBytes();
             LOGGER.debug("edmErrorResposeBuilder2: " + new String(dataBuf, StandardCharsets.UTF_8));
         } else {
-            edmResponseBuilder2.requestID(edmRequest.getRequestID())
-                               .dataProvider(AgentPojo.builder()
-                                    .id("9999:norway2")
-                                    .idSchemeID(EToopIdentifierType.EIDAS)
-                                    .name("Brønnøysund Register Centre")
-                                    .address(AddressPojo.builder()
-                                            .fullAddress("Brønnøysundregistrene, Havnegata 48, 8900 Brønnøysund, Norway")
-                                            .streetName("Havnegata 48")
-                                            .postalCode("8910 Brønnøysund")
-                                            .town("Brønnøysund")
-                                            .countryCode("NO")
-                                            .build())
-                                    .build())
+            edmResponseBuilder.requestID(edmRequest.getRequestID())
+                                .dataProvider(norway())
                                 .issueDateTimeNow()
                                 .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
                                 .responseStatus(ERegRepResponseStatus.SUCCESS);
 
-            dataBuf = edmResponseBuilder2.build().getWriter().getAsBytes();
+            dataBuf = edmResponseBuilder.build().getWriter().getAsBytes();
             LOGGER.debug("edmResponseBuilder: " + new String(dataBuf, StandardCharsets.UTF_8));
         }
 
@@ -342,6 +314,25 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     @Override
     public void handleIncomingResponse(@Nonnull IncomingEDMResponse incomingEDMResponse) throws MEIncomingException {
         EDMResponse edmResponse = incomingEDMResponse.getResponse();
+        LOGGER.info("Got incoming reponse for request " + edmResponse.getRequestID());
+
+        synchronized (requestMapLock) {
+            RequestCacheItem requestCacheItem = requestMap.get(edmResponse.getRequestID());
+            if (requestCacheItem == null) {
+                LOGGER.info("Request for response {} already removed from pending queue", edmResponse.getRequestID());
+                return;
+            }
+
+            Enhet enhet = new Enhet();
+            //TODO
+            requestCacheItem.setEnhet(enhet);
+
+            synchronized(requestCacheItem) {
+                requestMap.remove(requestCacheItem);
+                LOGGER.info("Notify pending request {}", requestCacheItem.getId());
+                requestCacheItem.notifyAll();
+            }
+        }
     }
 
     @Override
@@ -349,34 +340,170 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         EDMErrorResponse edmErrorResponse = incomingEDMErrorResponse.getErrorResponse();
     }
 
+    private MERoutingInformation getRoutingInformation(final IParticipantIdentifier senderId, final IParticipantIdentifier receiverId) {
+        //Query for SMP Endpoint
+        final String transportProtocol = ESMPTransportProfile.TRANSPORT_PROFILE_BDXR_AS4.getID();
+        final EndpointType endpointType = TCAPIHelper.querySMPEndpoint(receiverId,
+                EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
+                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
+                transportProtocol);
+
+        //Did we find an endpoint?
+        if (endpointType == null) {
+            LOGGER.error("SME lookup failed for "+receiverId);
+            return null;
+        }
+
+        //Create x509Certificate, we only have byte[]
+        final X509Certificate certificate;
+        try (InputStream is = new ByteArrayInputStream(endpointType.getCertificate())){
+            CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+            certificate = (X509Certificate) certificateFactory.generateCertificate(is);
+        } catch (CertificateException | IOException e) {
+            LOGGER.error("Failed to get CertificateFactory instance: " + e.getMessage());
+            return null;
+        }
+
+        //Create routing information
+        return new MERoutingInformation(senderId, receiverId,
+                EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
+                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
+                transportProtocol,
+                endpointType.getEndpointURI(),
+                certificate);
+    }
+
+    private AgentPojo norway() {
+        CountryCode norway = countryCodeCache.getCountryCode(NORWEGIAN_COUNTRYCODE);
+        if (norway == null) {
+            LOGGER.error("Could not find Norway in CountryCode cache!");
+            return null;
+        }
+
+        return AgentPojo.builder()
+                .id(norway.getId())
+                .idSchemeID(EToopIdentifierType.EIDAS)
+                .name("Brønnøysund Register Centre")
+                .address(AddressPojo.builder()
+                        .fullAddress("Brønnøysundregistrene, Havnegata 48, 8900 Brønnøysund, Norway")
+                        .streetName("Havnegata 48")
+                        .postalCode("8910 Brønnøysund")
+                        .town("Brønnøysund")
+                        .countryCode(norway.getCode())
+                        .build())
+                .build();
+    }
+
     private void sendIncomingRequestFailed(final String errorMsg) {
         LOGGER.error(errorMsg);
         //TODO, send error response
     }
 
-    public Enhet getOrganization(final String countrycode, final String orgno) throws TimeoutException  {
-/*
+    public Enhet getByLegalPerson(final String countrycode, final String legalperson) throws TimeoutException  {
+        CountryCode norway = countryCodeCache.getCountryCode(NORWEGIAN_COUNTRYCODE);
+        if (norway == null) {
+            LOGGER.error("Could not find Norway in CountryCode cache!");
+            return null;
+        }
+
+        CountryCode receiverCountry = countryCodeCache.getCountryCode(countrycode);
+        if (receiverCountry == null) {
+            LOGGER.error("Could not find code \""+countrycode+"\" in CountryCode cache!");
+            return null;
+        }
+
+        IParticipantIdentifier sender = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, norway.getId());
+        IParticipantIdentifier receiver = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, receiverCountry.getId());
+        final MERoutingInformation meRoutingInformation = getRoutingInformation(sender, receiver);
+        if (meRoutingInformation == null) {
+            LOGGER.error("Failed to get RoutingInformation");
+            return null;
+        }
+
+        //Build concepts request
+        final ConceptPojo.Builder conceptsBuilder = ConceptPojo.builder()
+                .randomID()
+                .name(EToopConcept.REGISTERED_ORGANIZATION);
+
+        EToopConcept[] requestedConcepts = {EToopConcept.COMPANY_NAME,
+                                            EToopConcept.REGISTRATION_DATE,
+                                            EToopConcept.COMPANY_CODE,
+                                            EToopConcept.VAT_NUMBER,
+                                            EToopConcept.FOUNDATION_DATE,
+                                            EToopConcept.COMPANY_TYPE,
+                                            EToopConcept.COUNTRY_NAME,
+                                            EToopConcept.POSTAL_CODE,
+                                            EToopConcept.REGION,
+                                            EToopConcept.STREET_ADDRESS,
+                                            EToopConcept.NACE_CODE};
+        for (EToopConcept requestedConcept : requestedConcepts) {
+            conceptsBuilder.addChild(ConceptPojo.builder()
+                                                .randomID()
+                                                .name(requestedConcept)
+                                                .build());
+        }
+
+        //Create message
+        EDMRequest edmRequest = EDMRequest.builderConcept()
+                .concept(conceptsBuilder.build())
+                .randomID()
+                .dataConsumer(norway())
+                .dataSubject(BusinessPojo.builder()
+                        .legalIDSchemeID(EToopIdentifierType.EIDAS)
+                        .legalID(norway.getCode()+"/"+receiverCountry.getCode()+"/"+legalperson)
+                        .build())
+                .issueDateTimeNow()
+                .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
+                .build();
+
+        byte[] dataBuf = edmRequest.getWriter().getAsBytes();
+        LOGGER.info("edmRequestBuilder: " + new String(dataBuf, StandardCharsets.UTF_8));
+
+        final MEMessage meMessage = MEMessage.builder().senderID(sender)
+                .receiverID(receiver)
+                .docTypeID(EPredefinedDocumentTypeIdentifier.REGISTEREDORGANIZATION_REGISTERED_ORGANIZATION_TYPE_CONCEPT_CCCEV_TOOP_EDM_V2_0)
+                .processID(EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY)
+                .payload(MEPayload.builder()
+                        .mimeTypeRegRep()
+                        .randomContentID()
+                        .data(dataBuf)
+                        .build())
+                .build();
+
         //Send request
         try {
             TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
         } catch (MEOutgoingException e) {
-            sendIncomingRequestFailed("Got exception when sending AS4 message: "+e.getMessage());
+            LOGGER.error("Got exception when sending AS4 message: "+e.getMessage());
+            return null;
         }
-*/
-        RequestCache requestCacheItem = new RequestCache("id");
+
+        RequestCacheItem requestCacheItem = new RequestCacheItem(edmRequest.getRequestID());
         try {
             synchronized(requestMapLock) {
+                LOGGER.info("Adding {} to pending queue", requestCacheItem.getId());
                 requestMap.put(requestCacheItem.getId(), requestCacheItem);
             }
-            requestCacheItem.getRequestLock().wait(REQUEST_TIMEOUT.toMillis());
+            synchronized(requestCacheItem.getRequestLock()) {
+                requestCacheItem.getRequestLock().wait(REQUEST_TIMEOUT.toMillis());
+            }
+            if (requestCacheItem.getEnhet() == null) {
+                throw new InterruptedException();
+            }
             return requestCacheItem.getEnhet();
         } catch (InterruptedException e) {
+            LOGGER.info("{}: EDMRequest timed out", requestCacheItem.getId());
             throw new TimeoutException();
         } finally {
             synchronized(requestMapLock) {
+                LOGGER.info("Removing {} from pending queue", requestCacheItem.getId());
                 requestMap.remove(requestCacheItem.getId());
             }
         }
+    }
+
+    public Enhet getByNaturalPerson(final String countrycode, final String naturalperson) throws TimeoutException  {
+        return null;
     }
 
 }

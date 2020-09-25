@@ -50,14 +50,14 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     @Override
     public ResponseEntity<Enhet> getByLegalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String legalperson) {
         try {
-            final Enhet enhet = brregIncomingHandler.getOrganization(countrycode, legalperson);
+            final Enhet enhet = brregIncomingHandler.getByLegalPerson(countrycode, legalperson);
             if (enhet == null) {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             } else {
                 return new ResponseEntity<>(enhet, HttpStatus.OK);
             }
         } catch (TimeoutException e) {
-            LOGGER.error("getOrganization timed out while fetching "+countrycode+"/"+legalperson);
+            LOGGER.error("getByLegalPerson timed out while fetching "+countrycode+"/"+legalperson);
             return new ResponseEntity<>(HttpStatus.REQUEST_TIMEOUT);
         } catch (Exception e) {
             LOGGER.error("getByLegalPerson failed: ", e);
@@ -68,14 +68,14 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     @Override
     public ResponseEntity<Enhet> getByNaturalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String naturalperson) {
         try {
-            final Enhet enhet = brregIncomingHandler.getOrganization(countrycode, naturalperson);
+            final Enhet enhet = brregIncomingHandler.getByNaturalPerson(countrycode, naturalperson);
             if (enhet == null) {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             } else {
                 return new ResponseEntity<>(enhet, HttpStatus.OK);
             }
         } catch (TimeoutException e) {
-            LOGGER.error("getOrganization timed out while fetching "+countrycode+"/"+naturalperson);
+            LOGGER.error("getByNaturalPerson timed out while fetching "+countrycode+"/"+naturalperson);
             return new ResponseEntity<>(HttpStatus.REQUEST_TIMEOUT);
         } catch (Exception e) {
             LOGGER.error("getByNaturalPerson failed: ", e);
