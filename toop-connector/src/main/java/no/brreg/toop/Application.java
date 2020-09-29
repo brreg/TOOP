@@ -3,18 +3,13 @@ package no.brreg.toop;
 // This code is Public Domain. See LICENSE
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.helger.commons.collection.impl.CommonsArrayList;
-import com.helger.commons.system.SystemProperties;
-import com.helger.dns.dnsjava.DnsjavaInit;
-import com.helger.dns.ip.IPV4Addr;
-import com.helger.phase4.mgr.MetaAS4Manager;
 import com.helger.web.scope.mgr.WebScopeManager;
-import com.mashape.unirest.http.ObjectMapper;
-import com.mashape.unirest.http.Unirest;
 import eu.toop.connector.app.TCInit;
 import eu.toop.connector.mem.phase4.servlet.AS4ReceiveServlet;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
+import kong.unirest.ObjectMapper;
+import kong.unirest.Unirest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,21 +59,20 @@ public class Application {
     }
     private void initializeToopConnector() {
         LOGGER.info("Initializing toop connector");
-        SystemProperties.setPropertyValue(MetaAS4Manager.SYSTEM_PROPERTY_PHASE4_MANAGER_INMEMORY, true);
-        DnsjavaInit.initWithCustomDNSServers(new CommonsArrayList<>(IPV4Addr.getAsInetAddress (1, 1, 1, 1), IPV4Addr.getAsInetAddress (1, 0, 0, 1)));
+//        DnsjavaInit.initWithCustomDNSServers(new CommonsArrayList<>(IPV4Addr.getAsInetAddress (1, 1, 1, 1), IPV4Addr.getAsInetAddress (1, 0, 0, 1)));
         WebScopeManager.onGlobalBegin(servletContext);
         TCInit.initGlobally(servletContext, brregIncomingHandler);
     }
 
     @PreDestroy
-    public void shutdownToopConnector() {
+    public void shutdownApplication() {
         TCInit.shutdownGlobally(servletContext);
         WebScopeManager.onGlobalEnd();
+        Unirest.shutDown();
     }
 
     public static void initializeUnirestObjectMapper() {
-        //Initialize Unirest object mapper singleton
-        Unirest.setObjectMapper(new ObjectMapper() {
+        Unirest.config().setObjectMapper(new ObjectMapper() {
             private com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
             @Override

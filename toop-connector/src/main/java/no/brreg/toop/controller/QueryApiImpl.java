@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeoutException;
 
 
@@ -50,15 +51,23 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     @Override
     public ResponseEntity<Enhet> getByLegalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String legalperson) {
         try {
-            final Enhet enhet = brregIncomingHandler.getByLegalPerson(countrycode, legalperson);
-            if (enhet == null) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            } else {
-                return new ResponseEntity<>(enhet, HttpStatus.OK);
+            final BrregIncomingHandler.ToopResponse toopResponse = brregIncomingHandler.getByLegalPerson(countrycode, legalperson);
+            HttpStatus status = toopResponse==null ? HttpStatus.NOT_FOUND : toopResponse.getStatus();
+            final String errorMessage = toopResponse==null ? null : toopResponse.getErrorMessage();
+            if (status == HttpStatus.OK && toopResponse.getEnhet()==null) {
+                status = HttpStatus.NOT_FOUND;
             }
-        } catch (TimeoutException e) {
-            LOGGER.error("getByLegalPerson timed out while fetching "+countrycode+"/"+legalperson);
-            return new ResponseEntity<>(HttpStatus.REQUEST_TIMEOUT);
+
+            if (status == HttpStatus.OK) {
+                return new ResponseEntity<>(toopResponse.getEnhet(), HttpStatus.OK);
+            } else {
+                LOGGER.info("Status: "+status.value());
+                if (errorMessage!=null && !errorMessage.isEmpty()) {
+                    LOGGER.info("ErrorMsg: "+errorMessage);
+                    response.sendError(status.value(), errorMessage);
+                }
+                return new ResponseEntity<>(status);
+            }
         } catch (Exception e) {
             LOGGER.error("getByLegalPerson failed: ", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -68,17 +77,25 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     @Override
     public ResponseEntity<Enhet> getByNaturalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String naturalperson) {
         try {
-            final Enhet enhet = brregIncomingHandler.getByNaturalPerson(countrycode, naturalperson);
-            if (enhet == null) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            } else {
-                return new ResponseEntity<>(enhet, HttpStatus.OK);
+            final BrregIncomingHandler.ToopResponse toopResponse = brregIncomingHandler.getByNaturalPerson(countrycode, naturalperson);
+            HttpStatus status = toopResponse==null ? HttpStatus.NOT_FOUND : toopResponse.getStatus();
+            final String errorMessage = toopResponse==null ? null : toopResponse.getErrorMessage();
+            if (status == HttpStatus.OK && toopResponse.getEnhet()==null) {
+                status = HttpStatus.NOT_FOUND;
             }
-        } catch (TimeoutException e) {
-            LOGGER.error("getByNaturalPerson timed out while fetching "+countrycode+"/"+naturalperson);
-            return new ResponseEntity<>(HttpStatus.REQUEST_TIMEOUT);
+
+            if (status == HttpStatus.OK) {
+                return new ResponseEntity<>(toopResponse.getEnhet(), HttpStatus.OK);
+            } else {
+                LOGGER.info("Status: "+status.value());
+                if (errorMessage!=null && !errorMessage.isEmpty()) {
+                    LOGGER.info("ErrorMsg: "+errorMessage);
+                    response.sendError(status.value(), errorMessage);
+                }
+                return new ResponseEntity<>(status);
+            }
         } catch (Exception e) {
-            LOGGER.error("getByNaturalPerson failed: ", e);
+            LOGGER.error("getByLegalPerson failed: ", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

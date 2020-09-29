@@ -2,9 +2,9 @@ package no.brreg.toop;
 
 // This code is Public Domain. See LICENSE
 
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
+import kong.unirest.HttpResponse;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestException;
 import no.brreg.toop.generated.model.Enhet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

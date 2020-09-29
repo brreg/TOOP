@@ -22,35 +22,35 @@ import eu.toop.edm.error.*;
 import eu.toop.edm.model.*;
 import eu.toop.edm.pilot.gbm.EToopConcept;
 import eu.toop.edm.request.IEDMRequestPayloadConcepts;
+import eu.toop.edm.response.IEDMResponsePayloadConcepts;
+import eu.toop.edm.response.IEDMResponsePayloadProvider;
 import eu.toop.regrep.ERegRepResponseStatus;
-import no.brreg.toop.generated.model.CountryCode;
-import no.brreg.toop.generated.model.Enhet;
+import no.brreg.toop.generated.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeParseException;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 
 @Component
 public class BrregIncomingHandler implements IMEIncomingHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(BrregIncomingHandler.class);
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(28);
     private static final String NORWEGIAN_COUNTRYCODE = "NO";
 
     @Autowired
@@ -59,34 +59,72 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     @Autowired
     private CountryCodeCache countryCodeCache;
 
-    private class RequestCacheItem {
-        private String id;
+    public class ToopResponse {
         private Enhet enhet;
-        private Object requestLock;
+        private HttpStatus status;
+        private String errorMessage;
 
-        public RequestCacheItem(final String id) {
-            this.id = id;
-            this.requestLock = new Object();
+        public ToopResponse() {
             this.enhet = null;
+            this.status = HttpStatus.GATEWAY_TIMEOUT;
+            this.errorMessage = null;
         }
 
-        public String getId() {
-            return id;
+        public ToopResponse(final HttpStatus status, final String errorMessage) {
+            this.enhet = null;
+            this.status = status;
+            this.errorMessage = errorMessage;
         }
 
         public Enhet getEnhet() {
             return enhet;
         }
 
-        public Object getRequestLock() {
-            return requestLock;
-        }
-
         public void setEnhet(final Enhet enhet) {
             this.enhet = enhet;
         }
+
+        public HttpStatus getStatus() {
+            return status;
+        }
+
+        public void setStatus(final HttpStatus status) {
+            this.status = status;
+        }
+
+        public String getErrorMessage() {
+            return errorMessage;
+        }
+
+        public void setErrorMessage(final String errorMessage) {
+            this.errorMessage = errorMessage;
+        }
     }
-    private Map<String, RequestCacheItem> requestMap = new HashMap<>();
+
+    private class Request {
+        private String id;
+        private Object lock;
+        private ToopResponse response;
+
+        public Request(final String id) {
+            this.id = id;
+            this.lock = new Object();
+            this.response = new ToopResponse();
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public Object getLock() {
+            return lock;
+        }
+
+        public ToopResponse getResponse() {
+            return response;
+        }
+    }
+    private Map<String, Request> requestMap = new HashMap<>();
     private static Object requestMapLock = new Object();
 
 
@@ -280,7 +318,6 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                                    .responseStatus(ERegRepResponseStatus.FAILURE);
 
             dataBuf = edmErrorResposeBuilder.build().getWriter().getAsBytes();
-            LOGGER.debug("edmErrorResposeBuilder2: " + new String(dataBuf, StandardCharsets.UTF_8));
         } else {
             edmResponseBuilder.requestID(edmRequest.getRequestID())
                                 .dataProvider(norway())
@@ -289,7 +326,6 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                                 .responseStatus(ERegRepResponseStatus.SUCCESS);
 
             dataBuf = edmResponseBuilder.build().getWriter().getAsBytes();
-            LOGGER.debug("edmResponseBuilder: " + new String(dataBuf, StandardCharsets.UTF_8));
         }
 
         final MEMessage meMessage = MEMessage.builder().senderID(incomingEDMRequest.getMetadata().getReceiverID())
@@ -316,21 +352,89 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         EDMResponse edmResponse = incomingEDMResponse.getResponse();
         LOGGER.info("Got incoming reponse for request " + edmResponse.getRequestID());
 
+        //Is this a request we support?
+        IEDMResponsePayloadConcepts conceptPayloadProvider = null;
+        for (IEDMResponsePayloadProvider payloadProvider : edmResponse.getAllPayloadProviders()) {
+            if (payloadProvider instanceof IEDMResponsePayloadConcepts) {
+                conceptPayloadProvider = (IEDMResponsePayloadConcepts) payloadProvider;
+            }
+        }
+        if (conceptPayloadProvider == null) {
+            LOGGER.error("No payloadprovider found for response "+edmResponse.getRequestID());
+            return;
+        }
+
+        //Is the request in a structure we support?
+        final List<ConceptPojo> concepts = conceptPayloadProvider.concepts();
+        if (concepts.size() != 1) {
+            LOGGER.error("Expected exactly one top-level response concept. Got:  "+concepts.size());
+            return;
+        }
+
+        //Is this a request for REGISTERED_ORGANIZATION?
+        final ConceptPojo registeredOrganizationConceptResponse = concepts.get(0);
+        if (!registeredOrganizationConceptResponse.getName().equals(EToopConcept.REGISTERED_ORGANIZATION.getAsQName())) {
+            LOGGER.error("Expected top-level response concept "+EToopConcept.REGISTERED_ORGANIZATION.getAsQName()+". Got: "+registeredOrganizationConceptResponse.getName());
+            return;
+        }
+
+        //Populate Enhet
+        Enhet enhet = new Enhet();
+        for (ConceptPojo conceptResponse : registeredOrganizationConceptResponse.children()) {
+            if (conceptResponse==null || conceptResponse.isErrorValue()) {
+                continue;
+            }
+
+            //Enhet
+            if (EToopConcept.COMPANY_NAME.getAsQName().equals(conceptResponse.getName())) {
+                enhet.setNavn(conceptResponse.getValue().getAsString());
+            } else if (EToopConcept.REGISTRATION_DATE.getAsQName().equals(conceptResponse.getName())) {
+                enhet.setRegistreringsdatoEnhetsregisteret(getConceptDateAsString(conceptResponse));
+            } else if (EToopConcept.COMPANY_CODE.getAsQName().equals(conceptResponse.getName())) {
+                enhet.setOrganisasjonsnummer(conceptResponse.getValue().getAsString());
+            } else if (EToopConcept.FOUNDATION_DATE.getAsQName().equals(conceptResponse.getName())) {
+                enhet.setStiftelsedato(getConceptDateAsString(conceptResponse));
+            }
+            //Enhet.Organisasjonsform
+            else if (EToopConcept.COMPANY_TYPE.getAsQName().equals(conceptResponse.getName())) {
+                if (enhet.getOrganisasjonsform()==null) {
+                    enhet.setOrganisasjonsform(new Organisasjonsform());
+                }
+                enhet.getOrganisasjonsform().setKode(conceptResponse.getValue().getAsString());
+            }
+            //Enhet.Forretningsadresse
+            else if (EToopConcept.COUNTRY_NAME.getAsQName().equals(conceptResponse.getName())) {
+                getOrCreateForretningsAdresse(enhet).setLandkode(conceptResponse.getValue().getAsString());
+            } else if (EToopConcept.POSTAL_CODE.getAsQName().equals(conceptResponse.getName())) {
+                getOrCreateForretningsAdresse(enhet).setPoststed(conceptResponse.getValue().getAsString());
+            } else if (EToopConcept.REGION.getAsQName().equals(conceptResponse.getName())) {
+                getOrCreateForretningsAdresse(enhet).setKommune(conceptResponse.getValue().getAsString());
+            } else if (EToopConcept.STREET_ADDRESS.getAsQName().equals(conceptResponse.getName())) {
+                getOrCreateForretningsAdresse(enhet).setAdresse(Collections.singletonList(conceptResponse.getValue().getAsString()));
+            }
+            //Enhet.Næringskode1
+            else if (EToopConcept.COUNTRY_NAME.getAsQName().equals(conceptResponse.getName())) {
+                if (enhet.getNaeringskode1()==null) {
+                    enhet.setNaeringskode1(new Naeringskode());
+                }
+                enhet.getNaeringskode1().setKode(conceptResponse.getValue().getAsString());
+            }
+        }
+
         synchronized (requestMapLock) {
-            RequestCacheItem requestCacheItem = requestMap.get(edmResponse.getRequestID());
-            if (requestCacheItem == null) {
+            Request request = requestMap.get(edmResponse.getRequestID());
+            if (request == null) {
                 LOGGER.info("Request for response {} already removed from pending queue", edmResponse.getRequestID());
                 return;
             }
 
-            Enhet enhet = new Enhet();
-            //TODO
-            requestCacheItem.setEnhet(enhet);
-
-            synchronized(requestCacheItem) {
-                requestMap.remove(requestCacheItem);
-                LOGGER.info("Notify pending request {}", requestCacheItem.getId());
-                requestCacheItem.notifyAll();
+            synchronized(request) {
+                request.getResponse().setEnhet(enhet);
+                request.getResponse().setStatus(HttpStatus.OK);
+                requestMap.remove(request);
+                synchronized (request.getLock()) {
+                    request.getLock().notify();
+                }
             }
         }
     }
@@ -338,6 +442,23 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     @Override
     public void handleIncomingErrorResponse(@Nonnull IncomingEDMErrorResponse incomingEDMErrorResponse) throws MEIncomingException {
         EDMErrorResponse edmErrorResponse = incomingEDMErrorResponse.getErrorResponse();
+        LOGGER.info("Got incoming error reponse for request " + edmErrorResponse.getRequestID());
+
+        synchronized (requestMapLock) {
+            Request request = requestMap.get(edmErrorResponse.getRequestID());
+            if (request == null) {
+                LOGGER.info("Request for error response {} already removed from pending queue", edmErrorResponse.getRequestID());
+                return;
+            }
+
+            synchronized(request) {
+                request.getResponse().setStatus(HttpStatus.NOT_FOUND);
+                requestMap.remove(request);
+                synchronized(request.getLock()) {
+                    request.getLock().notify();
+                }
+            }
+        }
     }
 
     private MERoutingInformation getRoutingInformation(final IParticipantIdentifier senderId, final IParticipantIdentifier receiverId) {
@@ -399,25 +520,22 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         //TODO, send error response
     }
 
-    public Enhet getByLegalPerson(final String countrycode, final String legalperson) throws TimeoutException  {
+    public ToopResponse getByLegalPerson(final String countrycode, final String legalperson) throws TimeoutException  {
         CountryCode norway = countryCodeCache.getCountryCode(NORWEGIAN_COUNTRYCODE);
         if (norway == null) {
-            LOGGER.error("Could not find Norway in CountryCode cache!");
-            return null;
+            return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, "Could not find Norway in CountryCode cache!");
         }
 
         CountryCode receiverCountry = countryCodeCache.getCountryCode(countrycode);
         if (receiverCountry == null) {
-            LOGGER.error("Could not find code \""+countrycode+"\" in CountryCode cache!");
-            return null;
+            return new ToopResponse(HttpStatus.NOT_FOUND, "Could not find code \""+countrycode+"\" in CountryCode cache!");
         }
 
         IParticipantIdentifier sender = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, norway.getId());
         IParticipantIdentifier receiver = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, receiverCountry.getId());
         final MERoutingInformation meRoutingInformation = getRoutingInformation(sender, receiver);
         if (meRoutingInformation == null) {
-            LOGGER.error("Failed to get RoutingInformation");
-            return null;
+            return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, "Failed to get RoutingInformation");
         }
 
         //Build concepts request
@@ -457,8 +575,6 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 .build();
 
         byte[] dataBuf = edmRequest.getWriter().getAsBytes();
-        LOGGER.info("edmRequestBuilder: " + new String(dataBuf, StandardCharsets.UTF_8));
-
         final MEMessage meMessage = MEMessage.builder().senderID(sender)
                 .receiverID(receiver)
                 .docTypeID(EPredefinedDocumentTypeIdentifier.REGISTEREDORGANIZATION_REGISTERED_ORGANIZATION_TYPE_CONCEPT_CCCEV_TOOP_EDM_V2_0)
@@ -474,36 +590,58 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         try {
             TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
         } catch (MEOutgoingException e) {
-            LOGGER.error("Got exception when sending AS4 message: "+e.getMessage());
-            return null;
+            return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, "Got exception when sending AS4 message: "+e.getMessage());
         }
 
-        RequestCacheItem requestCacheItem = new RequestCacheItem(edmRequest.getRequestID());
+        Request request = new Request(edmRequest.getRequestID());
         try {
             synchronized(requestMapLock) {
-                LOGGER.info("Adding {} to pending queue", requestCacheItem.getId());
-                requestMap.put(requestCacheItem.getId(), requestCacheItem);
+                requestMap.put(request.getId(), request);
             }
-            synchronized(requestCacheItem.getRequestLock()) {
-                requestCacheItem.getRequestLock().wait(REQUEST_TIMEOUT.toMillis());
+            synchronized(request.getLock()) {
+                request.getLock().wait(REQUEST_TIMEOUT.toMillis());
             }
-            if (requestCacheItem.getEnhet() == null) {
-                throw new InterruptedException();
-            }
-            return requestCacheItem.getEnhet();
+            return request.getResponse();
         } catch (InterruptedException e) {
-            LOGGER.info("{}: EDMRequest timed out", requestCacheItem.getId());
-            throw new TimeoutException();
+            return new ToopResponse(HttpStatus.GATEWAY_TIMEOUT, "Request timed out");
         } finally {
             synchronized(requestMapLock) {
-                LOGGER.info("Removing {} from pending queue", requestCacheItem.getId());
-                requestMap.remove(requestCacheItem.getId());
+                requestMap.remove(request.getId());
             }
         }
     }
 
-    public Enhet getByNaturalPerson(final String countrycode, final String naturalperson) throws TimeoutException  {
-        return null;
+    public ToopResponse getByNaturalPerson(final String countrycode, final String naturalperson) throws TimeoutException  {
+        return new Request("ToDo").getResponse();
+    }
+
+    private Adresse getOrCreateForretningsAdresse(final Enhet enhet) {
+        if (enhet.getForretningsadresse() == null) {
+            enhet.setForretningsadresse(new Adresse());
+        }
+        return enhet.getForretningsadresse();
+    }
+
+    private LocalDate getConceptDate(final ConceptPojo concept) {
+        if (concept==null || concept.getValue()==null) {
+            return null;
+        }
+
+        LocalDate conceptDate = concept.getValue().getDate();
+        if (conceptDate==null && concept.getValue().getAsString()!=null) {
+            try {
+                conceptDate = LocalDate.parse(concept.getValue().getAsString(), DateTimeFormatter.ofPattern("uuuu-MM-dd"));
+            } catch (DateTimeParseException e) {
+                LOGGER.info("Failed to parse string as date: " + concept.getValue().getAsString());
+                conceptDate = null;
+            }
+        }
+        return conceptDate;
+    }
+
+    private String getConceptDateAsString(final ConceptPojo concept) {
+        final LocalDate conceptDate = getConceptDate(concept);
+        return conceptDate==null ? null : conceptDate.format(DateTimeFormatter.ofPattern("uuuu-MM-dd"));
     }
 
 }
