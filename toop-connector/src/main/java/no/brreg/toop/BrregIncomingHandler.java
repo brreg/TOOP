@@ -3,7 +3,9 @@ package no.brreg.toop;
 // This code is Public Domain. See LICENSE
 
 import com.helger.peppol.smp.ESMPTransportProfile;
+import com.helger.peppolid.IDocumentTypeIdentifier;
 import com.helger.peppolid.IParticipantIdentifier;
+import com.helger.peppolid.IProcessIdentifier;
 import com.helger.peppolid.factory.SimpleIdentifierFactory;
 import com.helger.xsds.bdxr.smp1.EndpointType;
 import eu.toop.commons.codelist.EPredefinedDocumentTypeIdentifier;
@@ -284,7 +286,9 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             edmResponseBuilder = EDMResponse.builderConcept().concept(conceptsBuilder.build());
         }
 
-        final MERoutingInformation meRoutingInformation = getRoutingInformation(incomingEDMRequest.getMetadata().getReceiverID() /* incoming receiver is now sender */,
+        final MERoutingInformation meRoutingInformation = getRoutingInformation(EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
+                                                                                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
+                                                                                incomingEDMRequest.getMetadata().getReceiverID() /* incoming receiver is now sender */,
                                                                                 incomingEDMRequest.getMetadata().getSenderID() /* incoming sender is now receiver */);
         if (meRoutingInformation == null) {
             sendIncomingRequestFailed("Failed to get RoutingInformation");
@@ -461,13 +465,11 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         }
     }
 
-    private MERoutingInformation getRoutingInformation(final IParticipantIdentifier senderId, final IParticipantIdentifier receiverId) {
+    private MERoutingInformation getRoutingInformation(final IDocumentTypeIdentifier docTypeIdentifier, final IProcessIdentifier processIdentifier,
+                                                       IParticipantIdentifier senderId, final IParticipantIdentifier receiverId) {
         //Query for SMP Endpoint
         final String transportProtocol = ESMPTransportProfile.TRANSPORT_PROFILE_BDXR_AS4.getID();
-        final EndpointType endpointType = TCAPIHelper.querySMPEndpoint(receiverId,
-                EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
-                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
-                transportProtocol);
+        final EndpointType endpointType = TCAPIHelper.querySMPEndpoint(receiverId, docTypeIdentifier, processIdentifier, transportProtocol);
 
         //Did we find an endpoint?
         if (endpointType == null) {
@@ -487,8 +489,8 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
         //Create routing information
         return new MERoutingInformation(senderId, receiverId,
-                EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
-                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
+                docTypeIdentifier,
+                processIdentifier,
                 transportProtocol,
                 endpointType.getEndpointURI(),
                 certificate);
@@ -533,7 +535,10 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
         IParticipantIdentifier sender = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, norway.getId());
         IParticipantIdentifier receiver = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, receiverCountry.getId());
-        final MERoutingInformation meRoutingInformation = getRoutingInformation(sender, receiver);
+        final MERoutingInformation meRoutingInformation = getRoutingInformation(EPredefinedDocumentTypeIdentifier.REGISTEREDORGANIZATION_REGISTERED_ORGANIZATION_TYPE_CONCEPT_CCCEV_TOOP_EDM_V2_0,
+                                                                                EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
+                                                                                sender,
+                                                                                receiver);
         if (meRoutingInformation == null) {
             return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, "Failed to get RoutingInformation");
         }
@@ -629,6 +634,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
         LocalDate conceptDate = concept.getValue().getDate();
         if (conceptDate==null && concept.getValue().getAsString()!=null) {
+            LOGGER.info("Concept date did not have dateValue. Trying to parse textValue \"" + concept.getValue().getAsString() + "\"");
             try {
                 conceptDate = LocalDate.parse(concept.getValue().getAsString(), DateTimeFormatter.ofPattern("uuuu-MM-dd"));
             } catch (DateTimeParseException e) {
