@@ -16,9 +16,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.concurrent.TimeoutException;
+import java.util.Map;
 
 
 @Controller
@@ -51,7 +52,7 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     @Override
     public ResponseEntity<Enhet> getByLegalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String legalperson) {
         try {
-            final BrregIncomingHandler.ToopResponse toopResponse = brregIncomingHandler.getByLegalPerson(countrycode, legalperson);
+            final BrregIncomingHandler.ToopResponse toopResponse = brregIncomingHandler.getByIdentifier(countrycode, legalperson, new HashMap<>(), true);
             HttpStatus status = toopResponse==null ? HttpStatus.NOT_FOUND : toopResponse.getStatus();
             final String errorMessage = toopResponse==null ? null : toopResponse.getErrorMessage();
             if (status == HttpStatus.OK && toopResponse.getEnhet()==null) {
@@ -75,9 +76,20 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     }
 
     @Override
-    public ResponseEntity<Enhet> getByNaturalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String naturalperson) {
+    public ResponseEntity<Enhet> getByNaturalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response,
+                                                    String countrycode, String naturalperson, String firstname, String lastname, LocalDate birthdate) {
         try {
-            final BrregIncomingHandler.ToopResponse toopResponse = brregIncomingHandler.getByNaturalPerson(countrycode, naturalperson);
+            Map<String,Object> properties = new HashMap<>();
+            if (firstname!=null && !firstname.isEmpty()) {
+                properties.put("firstname", firstname);
+            }
+            if (lastname!=null && !lastname.isEmpty()) {
+                properties.put("lastname", lastname);
+            }
+            if (birthdate!=null) {
+                properties.put("birthdate", birthdate);
+            }
+            final BrregIncomingHandler.ToopResponse toopResponse = brregIncomingHandler.getByIdentifier(countrycode, naturalperson, properties, false);
             HttpStatus status = toopResponse==null ? HttpStatus.NOT_FOUND : toopResponse.getStatus();
             final String errorMessage = toopResponse==null ? null : toopResponse.getErrorMessage();
             if (status == HttpStatus.OK && toopResponse.getEnhet()==null) {

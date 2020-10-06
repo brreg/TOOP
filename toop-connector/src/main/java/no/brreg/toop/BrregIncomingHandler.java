@@ -2,6 +2,9 @@ package no.brreg.toop;
 
 // This code is Public Domain. See LICENSE
 
+import com.helger.commons.collection.impl.CommonsArrayList;
+import com.helger.dns.dnsjava.DnsjavaInit;
+import com.helger.dns.ip.IPV4Addr;
 import com.helger.peppol.smp.ESMPTransportProfile;
 import com.helger.peppolid.IDocumentTypeIdentifier;
 import com.helger.peppolid.IParticipantIdentifier;
@@ -38,6 +41,7 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -46,7 +50,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.concurrent.TimeoutException;
 
 
 @Component
@@ -54,6 +57,11 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(BrregIncomingHandler.class);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(28);
     private static final String NORWEGIAN_COUNTRYCODE = "NO";
+    private static final InetAddress[] dnsServers = {IPV4Addr.getAsInetAddress (1, 1, 1, 1),
+                                                     IPV4Addr.getAsInetAddress (8, 8, 8, 8),
+                                                     IPV4Addr.getAsInetAddress (1, 0, 0, 1),
+                                                     IPV4Addr.getAsInetAddress (8, 8, 4, 4)};
+
 
     @Autowired
     private EnhetsregisterCache enhetsregisterCache;
@@ -469,7 +477,16 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                                                        IParticipantIdentifier senderId, final IParticipantIdentifier receiverId) {
         //Query for SMP Endpoint
         final String transportProtocol = ESMPTransportProfile.TRANSPORT_PROFILE_BDXR_AS4.getID();
-        final EndpointType endpointType = TCAPIHelper.querySMPEndpoint(receiverId, docTypeIdentifier, processIdentifier, transportProtocol);
+        EndpointType endpointType = null;
+        for (InetAddress dnsServer : dnsServers) {
+            try {
+                DnsjavaInit.initWithCustomDNSServers(new CommonsArrayList<>(dnsServer));
+                endpointType = TCAPIHelper.querySMPEndpoint(receiverId, docTypeIdentifier, processIdentifier, transportProtocol);
+                break;
+            } catch (Exception e) {
+                LOGGER.info("Resolve using "+dnsServer.toString()+" failed: " + e.getMessage());
+            }
+        }
 
         //Did we find an endpoint?
         if (endpointType == null) {
@@ -522,7 +539,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         //TODO, send error response
     }
 
-    public ToopResponse getByLegalPerson(final String countrycode, final String legalperson) throws TimeoutException  {
+    public ToopResponse getByIdentifier(final String countrycode, final String identifier, final Map<String,Object> properties, final boolean isLegalPerson) {
         CountryCode norway = countryCodeCache.getCountryCode(NORWEGIAN_COUNTRYCODE);
         if (norway == null) {
             return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, "Could not find Norway in CountryCode cache!");
@@ -567,17 +584,29 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         }
 
         //Create message
-        EDMRequest edmRequest = EDMRequest.builderConcept()
+        EDMRequest.BuilderConcept edmRequestBuilder = EDMRequest.builderConcept()
                 .concept(conceptsBuilder.build())
                 .randomID()
                 .dataConsumer(norway())
-                .dataSubject(BusinessPojo.builder()
-                        .legalIDSchemeID(EToopIdentifierType.EIDAS)
-                        .legalID(norway.getCode()+"/"+receiverCountry.getCode()+"/"+legalperson)
-                        .build())
                 .issueDateTimeNow()
-                .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
-                .build();
+                .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20);
+
+        if (isLegalPerson) {
+            edmRequestBuilder.dataSubject(BusinessPojo.builder()
+                    .legalIDSchemeID(EToopIdentifierType.EIDAS)
+                    .legalID(norway.getCode()+"/"+receiverCountry.getCode()+"/"+identifier)
+                    .build());
+        } else {
+            edmRequestBuilder.dataSubject(PersonPojo.builder()
+                    .idSchemeID(EToopIdentifierType.EIDAS)
+                    .id(norway.getCode()+"/"+receiverCountry.getCode()+"/"+identifier)
+                    .firstName((String)properties.getOrDefault("firstname", "Any"))
+                    .familyName((String)properties.getOrDefault("lastname", "Any"))
+                    .birthDate((LocalDate)properties.getOrDefault("birthdate", LocalDate.of(1970, 1, 1)))
+                    .build());
+        }
+
+        EDMRequest edmRequest = edmRequestBuilder.build();
 
         byte[] dataBuf = edmRequest.getWriter().getAsBytes();
         final MEMessage meMessage = MEMessage.builder().senderID(sender)
@@ -614,10 +643,6 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 requestMap.remove(request.getId());
             }
         }
-    }
-
-    public ToopResponse getByNaturalPerson(final String countrycode, final String naturalperson) throws TimeoutException  {
-        return new Request("ToDo").getResponse();
     }
 
     private Adresse getOrCreateForretningsAdresse(final Enhet enhet) {

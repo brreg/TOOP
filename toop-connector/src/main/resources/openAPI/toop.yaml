@@ -59,6 +59,25 @@ paths:
           description: ID for the natural person
           schema:
             type: string
+        - name: firstname
+          in: query
+          required: false
+          description: Firstname for the natural person
+          schema:
+            type: string
+        - name: lastname
+          in: query
+          required: false
+          description: Lastname for the natural person
+          schema:
+            type: string
+        - name: birthdate
+          in: query
+          required: false
+          description: Birthdate for the natural person
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: OK
