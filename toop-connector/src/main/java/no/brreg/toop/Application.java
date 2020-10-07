@@ -59,7 +59,6 @@ public class Application {
     }
     private void initializeToopConnector() {
         LOGGER.info("Initializing toop connector");
-//        DnsjavaInit.initWithCustomDNSServers(new CommonsArrayList<>(IPV4Addr.getAsInetAddress (1, 1, 1, 1), IPV4Addr.getAsInetAddress (1, 0, 0, 1)));
         WebScopeManager.onGlobalBegin(servletContext);
         TCInit.initGlobally(servletContext, brregIncomingHandler);
     }
