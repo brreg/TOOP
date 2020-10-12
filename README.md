@@ -26,8 +26,8 @@ _OpenShift pods are available at https://console-openshift-console.apps.ocp-prd.
 
 ## The properties files
 The properties files are stored as OpenShift Secrets. The files, without passwords, looks like this:
-###For toop-smp:
-####smp-server.properties
+### For toop-smp:
+#### smp-server.properties
 ```
 smp.backend = xml
 smp.keystore.type = jks
@@ -51,7 +51,7 @@ smp.identifiertype = simple
 smp.rest.type = bdxr
 ```
 
-####pd-client.properties
+#### pd-client.properties
 ```
 keystore.type = jks
 keystore.path = /config/toop-keystore.jks
@@ -63,7 +63,7 @@ truststore.path = /config/playground-truststore-v4.1.jks
 truststore.password = <password>
 ```
 
-####webapp.properties
+#### webapp.properties
 ```
 global.debug = false
 global.production = true
@@ -79,8 +79,8 @@ webapp.statistics.persist = false
 ```
 (in addition, a 10MB persistent volume is mounted at /home/git/conf/ )
 
-###For toop-connector
-####application.properties 
+### For toop-connector
+#### application.properties 
 ```
 global.debug = false
 global.production = true
