@@ -28,76 +28,83 @@ _OpenShift pods are available at https://console-openshift-console.apps.ocp-prd.
 The properties files are stored as OpenShift Secrets. The files, without passwords, looks like this:
 ###For toop-smp:
 ####smp-server.properties
-    smp.backend = xml
-    smp.keystore.type = jks
-    smp.keystore.path = /config/toop-keystore.jks
-    smp.keystore.password = <password>
-    smp.keystore.key.alias = brc
-    smp.keystore.key.password = <password>
-    smp.truststore.type = jks
-    smp.truststore.path = /config/playground-truststore-v4.1.jks
-    smp.truststore.password = <password>>
-    smp.forceroot = true
-    smp.publicurl = https://toop-smp.brreg.no/
-    smp.pd.hostname = http://directory.acc.exchange.toop.eu/
-    sml.active = false
-    sml.needed = true
-    sml.smpid = TOOP-GBM-NO-1_changeme
-    sml.url = https://edelivery.tech.ec.europa.eu/edelivery-sml/manageparticipantidentifier
-    smp.peppol.directory.integration.enabled = true
-    smp.peppol.directory.hostname = https://directory.acc.exchange.toop.eu
-    smp.identifiertype = simple
-    smp.rest.type = bdxr
+```
+smp.backend = xml
+smp.keystore.type = jks
+smp.keystore.path = /config/toop-keystore.jks
+smp.keystore.password = <password>
+smp.keystore.key.alias = brc
+smp.keystore.key.password = <password>
+smp.truststore.type = jks
+smp.truststore.path = /config/playground-truststore-v4.1.jks
+smp.truststore.password = <password>>
+smp.forceroot = true
+smp.publicurl = https://toop-smp.brreg.no/
+smp.pd.hostname = http://directory.acc.exchange.toop.eu/
+sml.active = false
+sml.needed = true
+sml.smpid = TOOP-GBM-NO-1_changeme
+sml.url = https://edelivery.tech.ec.europa.eu/edelivery-sml/manageparticipantidentifier
+smp.peppol.directory.integration.enabled = true
+smp.peppol.directory.hostname = https://directory.acc.exchange.toop.eu
+smp.identifiertype = simple
+smp.rest.type = bdxr
+```
 
 ####pd-client.properties
-    keystore.type = jks
-    keystore.path = /config/toop-keystore.jks
-    keystore.password = <password>
-    keystore.key.alias = brc
-    keystore.key.password = <password>
-    truststore.type = jks
-    truststore.path = /config/playground-truststore-v4.1.jks
-    truststore.password = <password>
+```
+keystore.type = jks
+keystore.path = /config/toop-keystore.jks
+keystore.password = <password>
+keystore.key.alias = brc
+keystore.key.password = <password>
+truststore.type = jks
+truststore.path = /config/playground-truststore-v4.1.jks
+truststore.password = <password>
+```
 
 ####webapp.properties
-    global.debug = false
-    global.production = true
-    webapp.datapath = conf
-    webapp.checkfileaccess = false
-    webapp.testversion = false
-    webapp.startpage.dynamictable = false
-    webapp.startpage.participants.none = false
-    webapp.startpage.extensions.show = false
-    webapp.directory.name = PEPPOL Directory
-    webapp.servicegroups.extensions.show = false
-    webapp.statistics.persist = false
-
+```
+global.debug = false
+global.production = true
+webapp.datapath = conf
+webapp.checkfileaccess = false
+webapp.testversion = false
+webapp.startpage.dynamictable = false
+webapp.startpage.participants.none = false
+webapp.startpage.extensions.show = false
+webapp.directory.name = PEPPOL Directory
+webapp.servicegroups.extensions.show = false
+webapp.statistics.persist = false
+```
 (in addition, a 10MB persistent volume is mounted at /home/git/conf/ )
 
 ###For toop-connector
 ####application.properties 
-    global.debug = false
-    global.production = true
-    global.instancename = no-breg-toop_changeme
-    toop.mem.implementation = phase4
-    toop.mem.incoming.url = http://toop-connector.brreg.no
-    toop.dsd.service.baseurl = http://dsd.dev.exchange.toop.eu
-    phase4.debug.http = false
-    phase4.debug.incoming = false
-    phase4.manager.inmemory = true
-    phase4.datapath = /tmp/
-    phase4.send.fromparty.id = brreg-no_changeme
-    phase4.keystore.type = pkcs12
-    phase4.keystore.path = /application/brc-2020.pfx
-    phase4.keystore.password = <password>
-    phase4.keystore.key-alias = brc
-    phase4.keystore.key-password = <password>
-    phase4.truststore.type = jks
-    phase4.truststore.path = /application/playground-truststore-v4.1.jks
-    phase4.truststore.password = <password>
-    truststore.type = jks
-    truststore.path = /application/playground-truststore-v4.1.jks
-    truststore.password = <password>
+```
+global.debug = false
+global.production = true
+global.instancename = no-breg-toop_changeme
+toop.mem.implementation = phase4
+toop.mem.incoming.url = http://toop-connector.brreg.no
+toop.dsd.service.baseurl = http://dsd.dev.exchange.toop.eu
+phase4.debug.http = false
+phase4.debug.incoming = false
+phase4.manager.inmemory = true
+phase4.datapath = /tmp/
+phase4.send.fromparty.id = brreg-no_changeme
+phase4.keystore.type = pkcs12
+phase4.keystore.path = /application/brc-2020.pfx
+phase4.keystore.password = <password>
+phase4.keystore.key-alias = brc
+phase4.keystore.key-password = <password>
+phase4.truststore.type = jks
+phase4.truststore.path = /application/playground-truststore-v4.1.jks
+phase4.truststore.password = <password>
+truststore.type = jks
+truststore.path = /application/playground-truststore-v4.1.jks
+truststore.password = <password>
+```
 
 ## Setting up TOOP (SMP and Connector)
 - Log in to https://toop-smp.brreg.no/secure/ using [default username/password](https://github.com/phax/phoss-smp/wiki/Running#default-login)
