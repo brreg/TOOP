@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import sun.rmi.log.LogHandler;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
@@ -68,6 +69,9 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
     @Autowired
     private CountryCodeCache countryCodeCache;
+
+    @Autowired
+    private LoggerHandler loggerHandler;
 
     public class ToopResponse {
         private Enhet enhet;
@@ -170,7 +174,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             sendIncomingRequestFailed("Request is missing LegalPerson");
             return;
         }
-        LOGGER.info("Got incoming request for {}", edmRequest.getDataSubjectLegalPerson().getLegalID());
+        loggerHandler.log(LoggerHandler.Level.INFO, "Got incoming request for " + edmRequest.getDataSubjectLegalPerson().getLegalID());
         final String[] legalIdParts = edmRequest.getDataSubjectLegalPerson().getLegalID().split("/");
         final String orgno = legalIdParts[legalIdParts.length-1];
         final Enhet enhet = enhetsregisterCache.getEnhet(orgno);
@@ -362,7 +366,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     @Override
     public void handleIncomingResponse(@Nonnull IncomingEDMResponse incomingEDMResponse) throws MEIncomingException {
         EDMResponse edmResponse = incomingEDMResponse.getResponse();
-        LOGGER.info("Got incoming reponse for request " + edmResponse.getRequestID());
+        loggerHandler.log(LoggerHandler.Level.INFO, "Got incoming reponse for request " + edmResponse.getRequestID());
 
         //Is this a request we support?
         IEDMResponsePayloadConcepts conceptPayloadProvider = null;
@@ -372,21 +376,21 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             }
         }
         if (conceptPayloadProvider == null) {
-            LOGGER.error("No payloadprovider found for response "+edmResponse.getRequestID());
+            loggerHandler.log(LoggerHandler.Level.ERROR, "No payloadprovider found for response "+edmResponse.getRequestID());
             return;
         }
 
         //Is the request in a structure we support?
         final List<ConceptPojo> concepts = conceptPayloadProvider.concepts();
         if (concepts.size() != 1) {
-            LOGGER.error("Expected exactly one top-level response concept. Got:  "+concepts.size());
+            loggerHandler.log(LoggerHandler.Level.ERROR, "Expected exactly one top-level response concept. Got:  "+concepts.size());
             return;
         }
 
         //Is this a request for REGISTERED_ORGANIZATION?
         final ConceptPojo registeredOrganizationConceptResponse = concepts.get(0);
         if (!registeredOrganizationConceptResponse.getName().equals(EToopConcept.REGISTERED_ORGANIZATION.getAsQName())) {
-            LOGGER.error("Expected top-level response concept "+EToopConcept.REGISTERED_ORGANIZATION.getAsQName()+". Got: "+registeredOrganizationConceptResponse.getName());
+            loggerHandler.log(LoggerHandler.Level.ERROR, "Expected top-level response concept "+EToopConcept.REGISTERED_ORGANIZATION.getAsQName()+". Got: "+registeredOrganizationConceptResponse.getName());
             return;
         }
 
@@ -436,7 +440,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         synchronized (requestMapLock) {
             Request request = requestMap.get(edmResponse.getRequestID());
             if (request == null) {
-                LOGGER.info("Request for response {} already removed from pending queue", edmResponse.getRequestID());
+                loggerHandler.log(LoggerHandler.Level.INFO, "Request for response "+edmResponse.getRequestID()+" already removed from pending queue");
                 return;
             }
 
@@ -454,12 +458,12 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     @Override
     public void handleIncomingErrorResponse(@Nonnull IncomingEDMErrorResponse incomingEDMErrorResponse) throws MEIncomingException {
         EDMErrorResponse edmErrorResponse = incomingEDMErrorResponse.getErrorResponse();
-        LOGGER.info("Got incoming error reponse for request " + edmErrorResponse.getRequestID());
+        loggerHandler.log(LoggerHandler.Level.INFO, "Got incoming error reponse for request " + edmErrorResponse.getRequestID());
 
         synchronized (requestMapLock) {
             Request request = requestMap.get(edmErrorResponse.getRequestID());
             if (request == null) {
-                LOGGER.info("Request for error response {} already removed from pending queue", edmErrorResponse.getRequestID());
+                loggerHandler.log(LoggerHandler.Level.INFO, "Request for error response "+edmErrorResponse.getRequestID()+" already removed from pending queue");
                 return;
             }
 
@@ -484,13 +488,13 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 endpointType = TCAPIHelper.querySMPEndpoint(receiverId, docTypeIdentifier, processIdentifier, transportProtocol);
                 break;
             } catch (Exception e) {
-                LOGGER.info("Resolve using "+dnsServer.toString()+" failed: " + e.getMessage());
+                loggerHandler.log(LoggerHandler.Level.INFO, "Resolve using "+dnsServer.toString()+" failed: " + e.getMessage());
             }
         }
 
         //Did we find an endpoint?
         if (endpointType == null) {
-            LOGGER.error("SME lookup failed for "+receiverId);
+            loggerHandler.log(LoggerHandler.Level.ERROR, "SME lookup failed for "+receiverId);
             return null;
         }
 
@@ -500,7 +504,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
             certificate = (X509Certificate) certificateFactory.generateCertificate(is);
         } catch (CertificateException | IOException e) {
-            LOGGER.error("Failed to get CertificateFactory instance: " + e.getMessage());
+            loggerHandler.log(LoggerHandler.Level.ERROR, "Failed to get CertificateFactory instance: " + e.getMessage());
             return null;
         }
 
@@ -516,7 +520,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     private AgentPojo norway() {
         CountryCode norway = countryCodeCache.getCountryCode(NORWEGIAN_COUNTRYCODE);
         if (norway == null) {
-            LOGGER.error("Could not find Norway in CountryCode cache!");
+            loggerHandler.log(LoggerHandler.Level.ERROR, "Could not find Norway in CountryCode cache!");
             return null;
         }
 
@@ -535,19 +539,23 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     }
 
     private void sendIncomingRequestFailed(final String errorMsg) {
-        LOGGER.error(errorMsg);
+        loggerHandler.log(LoggerHandler.Level.ERROR, errorMsg);
         //TODO, send error response
     }
 
     public ToopResponse getByIdentifier(final String countrycode, final String identifier, final Map<String,Object> properties, final boolean isLegalPerson) {
         CountryCode norway = countryCodeCache.getCountryCode(NORWEGIAN_COUNTRYCODE);
         if (norway == null) {
-            return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, "Could not find Norway in CountryCode cache!");
+            final String msg = "Could not find Norway in CountryCode cache!";
+            loggerHandler.log(LoggerHandler.Level.ERROR, msg);
+            return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, msg);
         }
 
         CountryCode receiverCountry = countryCodeCache.getCountryCode(countrycode);
         if (receiverCountry == null) {
-            return new ToopResponse(HttpStatus.NOT_FOUND, "Could not find code \""+countrycode+"\" in CountryCode cache!");
+            final String msg = "Could not find code \""+countrycode+"\" in CountryCode cache!";
+            loggerHandler.log(LoggerHandler.Level.ERROR, msg);
+            return new ToopResponse(HttpStatus.NOT_FOUND, msg);
         }
 
         IParticipantIdentifier sender = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, norway.getId());
@@ -557,7 +565,9 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                                                                                 sender,
                                                                                 receiver);
         if (meRoutingInformation == null) {
-            return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, "Failed to get RoutingInformation");
+            final String msg = "Failed to get RoutingInformation";
+            loggerHandler.log(LoggerHandler.Level.ERROR, msg);
+            return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, msg);
         }
 
         //Build concepts request
@@ -624,7 +634,9 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         try {
             TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
         } catch (MEOutgoingException e) {
-            return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, "Got exception when sending AS4 message: "+e.getMessage());
+            final String msg = "Got exception when sending AS4 message: "+e.getMessage();
+            loggerHandler.log(LoggerHandler.Level.ERROR, msg);
+            return new ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, msg);
         }
 
         Request request = new Request(edmRequest.getRequestID());
@@ -637,7 +649,9 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             }
             return request.getResponse();
         } catch (InterruptedException e) {
-            return new ToopResponse(HttpStatus.GATEWAY_TIMEOUT, "Request timed out");
+            final String msg = "Request timed out";
+            loggerHandler.log(LoggerHandler.Level.ERROR, msg);
+            return new ToopResponse(HttpStatus.GATEWAY_TIMEOUT, msg);
         } finally {
             synchronized(requestMapLock) {
                 requestMap.remove(request.getId());
@@ -659,11 +673,11 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
         LocalDate conceptDate = concept.getValue().getDate();
         if (conceptDate==null && concept.getValue().getAsString()!=null) {
-            LOGGER.info("Concept date did not have dateValue. Trying to parse textValue \"" + concept.getValue().getAsString() + "\"");
+            loggerHandler.log(LoggerHandler.Level.INFO, "Concept date did not have dateValue. Trying to parse textValue \"" + concept.getValue().getAsString() + "\"");
             try {
                 conceptDate = LocalDate.parse(concept.getValue().getAsString(), DateTimeFormatter.ofPattern("uuuu-MM-dd"));
             } catch (DateTimeParseException e) {
-                LOGGER.info("Failed to parse string as date: " + concept.getValue().getAsString());
+                loggerHandler.log(LoggerHandler.Level.INFO, "Failed to parse string as date: " + concept.getValue().getAsString());
                 conceptDate = null;
             }
         }

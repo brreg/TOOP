@@ -5,6 +5,19 @@ info:
 servers:
   - url: 'https://toop-connector.brreg.no/'
 paths:
+  /log:
+    get:
+      description: Return the most recent log messages
+      operationId: getLog
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Log"
   /query:
     get:
       description: Query for valid country codes
@@ -87,6 +100,16 @@ paths:
                 type: Enhet
 components:
   schemas:
+    Log:
+      type: object
+      properties:
+        time:
+          type: string
+          format: date-time
+        severity:
+          type: string
+        message:
+          type: string
     Enhet:
       type: object
       properties:
