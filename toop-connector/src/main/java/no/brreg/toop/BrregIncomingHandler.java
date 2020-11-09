@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import sun.rmi.log.LogHandler;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
@@ -298,7 +297,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             edmResponseBuilder = EDMResponse.builderConcept().concept(conceptsBuilder.build());
         }
 
-        final MERoutingInformation meRoutingInformation = getRoutingInformation(EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0,
+        final MERoutingInformation meRoutingInformation = getRoutingInformation(EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_1,
                                                                                 EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
                                                                                 incomingEDMRequest.getMetadata().getReceiverID() /* incoming receiver is now sender */,
                                                                                 incomingEDMRequest.getMetadata().getSenderID() /* incoming sender is now receiver */);
@@ -311,7 +310,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         byte[] dataBuf;
         if (isError) {
             edmErrorResposeBuilder.requestID(edmRequest.getRequestID())
-                                   .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
+                                   .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V21)
                                    .exception(EDMExceptionPojo.builder()
                                                               .exceptionType(EEDMExceptionType.INVALID_REQUEST)
                                                               .severityFailure()
@@ -338,7 +337,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             edmResponseBuilder.requestID(edmRequest.getRequestID())
                                 .dataProvider(norway())
                                 .issueDateTimeNow()
-                                .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20)
+                                .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V21)
                                 .responseStatus(ERegRepResponseStatus.SUCCESS);
 
             dataBuf = edmResponseBuilder.build().getWriter().getAsBytes();
@@ -346,7 +345,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
         final MEMessage meMessage = MEMessage.builder().senderID(incomingEDMRequest.getMetadata().getReceiverID())
                                                  .receiverID(incomingEDMRequest.getMetadata().getSenderID())
-                                                 .docTypeID(EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_0)
+                                                 .docTypeID(EPredefinedDocumentTypeIdentifier.QUERYRESPONSE_TOOP_EDM_V2_1)
                                                  .processID(EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY)
                                                  .payload(MEPayload.builder()
                                                                 .mimeTypeRegRep()
@@ -560,7 +559,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
 
         IParticipantIdentifier sender = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, norway.getId());
         IParticipantIdentifier receiver = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, receiverCountry.getId());
-        final MERoutingInformation meRoutingInformation = getRoutingInformation(EPredefinedDocumentTypeIdentifier.REGISTEREDORGANIZATION_REGISTERED_ORGANIZATION_TYPE_CONCEPT_CCCEV_TOOP_EDM_V2_0,
+        final MERoutingInformation meRoutingInformation = getRoutingInformation(EPredefinedDocumentTypeIdentifier.REGISTEREDORGANIZATION_REGISTERED_ORGANIZATION_TYPE_CONCEPT_CCCEV_TOOP_EDM_V2_1,
                                                                                 EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
                                                                                 sender,
                                                                                 receiver);
@@ -599,7 +598,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                 .randomID()
                 .dataConsumer(norway())
                 .issueDateTimeNow()
-                .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V20);
+                .specificationIdentifier(CToopEDM.SPECIFICATION_IDENTIFIER_TOOP_EDM_V21);
 
         if (isLegalPerson) {
             edmRequestBuilder.dataSubject(BusinessPojo.builder()
@@ -621,7 +620,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
         byte[] dataBuf = edmRequest.getWriter().getAsBytes();
         final MEMessage meMessage = MEMessage.builder().senderID(sender)
                 .receiverID(receiver)
-                .docTypeID(EPredefinedDocumentTypeIdentifier.REGISTEREDORGANIZATION_REGISTERED_ORGANIZATION_TYPE_CONCEPT_CCCEV_TOOP_EDM_V2_0)
+                .docTypeID(EPredefinedDocumentTypeIdentifier.REGISTEREDORGANIZATION_REGISTERED_ORGANIZATION_TYPE_CONCEPT_CCCEV_TOOP_EDM_V2_1)
                 .processID(EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY)
                 .payload(MEPayload.builder()
                         .mimeTypeRegRep()
