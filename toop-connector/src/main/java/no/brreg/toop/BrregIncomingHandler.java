@@ -72,7 +72,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     @Autowired
     private LoggerHandler loggerHandler;
 
-    public class ToopResponse {
+    public static class ToopResponse {
         private Enhet enhet;
         private HttpStatus status;
         private String errorMessage;
@@ -115,14 +115,12 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
     }
 
     private class Request {
-        private String id;
-        private Object lock;
-        private ToopResponse response;
+        private final String id;
+        private final Object lock = new Object();
+        private final ToopResponse response = new ToopResponse();
 
         public Request(final String id) {
             this.id = id;
-            this.lock = new Object();
-            this.response = new ToopResponse();
         }
 
         public String getId() {
@@ -137,8 +135,8 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             return response;
         }
     }
-    private Map<String, Request> requestMap = new HashMap<>();
-    private static Object requestMapLock = new Object();
+    private final Map<String, Request> requestMap = new HashMap<>();
+    private static final Object requestMapLock = new Object();
 
 
     @Override
@@ -213,7 +211,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
                         .valueText(enhet.getOrganisasjonsnummer());
                 } else if (EToopConcept.VAT_NUMBER.getAsQName().equals(conceptRequest.getName()) &&
                         enhet.getOrganisasjonsnummer()!=null &&
-                        enhet.getRegistrertIMvaregisteret()!=null && enhet.getRegistrertIMvaregisteret().booleanValue()==true) {
+                        enhet.getRegistrertIMvaregisteret()!=null && enhet.getRegistrertIMvaregisteret()) {
                     conceptBuilder = ConceptPojo.builder()
                             .name(EToopConcept.VAT_NUMBER)
                             .valueText(enhet.getOrganisasjonsnummer()+"MVA");

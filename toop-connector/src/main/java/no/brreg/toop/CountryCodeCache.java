@@ -22,17 +22,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 public class CountryCodeCache {
-    private static Logger LOGGER = LoggerFactory.getLogger(CountryCodeCache.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CountryCodeCache.class);
 
     private static final String COUNTRY_LOOKUP = "https://directory.acc.exchange.toop.eu/search/1.0/json?doctype=toop-doctypeid-qns%3A%3ARegisteredOrganization%3A%3AREGISTERED_ORGANIZATION_TYPE%3A%3ACONCEPT%23%23CCCEV%3A%3Atoop-edm%3Av2.0";
     public static final String COUNTRY_SCHEME = "iso6523-actorid-upis";
 
     private LocalDateTime cacheTime = null;
     private static final TemporalAmount CACHE_VALID_DURATION = Duration.ofHours(12);
-    private AtomicBoolean isUpgradingCache = new AtomicBoolean(false);
+    private final AtomicBoolean isUpgradingCache = new AtomicBoolean(false);
 
-    private static Map<String,CountryCode> countryCodes = new HashMap<>();
-    private static Object countryCodesLock = new Object();
+    private static final Map<String,CountryCode> countryCodes = new HashMap<>();
+    private static final Object countryCodesLock = new Object();
 
 
     public void update() {
@@ -94,7 +94,7 @@ public class CountryCodeCache {
     public List<CountryCode> getCountryCodes() {
         update();
         synchronized(countryCodesLock) {
-            return new ArrayList(countryCodes.values());
+            return new ArrayList<>(countryCodes.values());
         }
     }
 

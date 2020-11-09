@@ -54,7 +54,7 @@ paths:
           content:
             application/json:
               schema:
-                type: Enhet
+                $ref: "#/components/schemas/Enhet"
   /query/NP/{countrycode}/{naturalperson}:
     get:
       description: Query for a given Natural Person
@@ -97,7 +97,7 @@ paths:
           content:
             application/json:
               schema:
-                type: Enhet
+                $ref: "#/components/schemas/Enhet"
 components:
   schemas:
     Log:

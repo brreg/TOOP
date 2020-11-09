@@ -18,10 +18,10 @@ import java.util.HashMap;
 
 @Component
 public class EnhetsregisterCache {
-    private static Logger LOGGER = LoggerFactory.getLogger(EnhetsregisterCache.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EnhetsregisterCache.class);
 
-    private class EnhetItem {
-        private Enhet enhet;
+    private static class EnhetItem {
+        private final Enhet enhet;
         public LocalDateTime lastAccessed;
         public EnhetItem(final Enhet enhet) {
             this.enhet = enhet;
@@ -34,8 +34,8 @@ public class EnhetsregisterCache {
     }
 
     private static final int MAX_CACHE_ENTRIES = 1000;
-    private static HashMap<String,EnhetItem> enheter = new HashMap<>();
-    private static Object enheterLock = new Object();
+    private static final HashMap<String,EnhetItem> enheter = new HashMap<>();
+    private static final Object enheterLock = new Object();
 
 
     private int getMaxCacheEntries() {

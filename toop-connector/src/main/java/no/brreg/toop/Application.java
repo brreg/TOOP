@@ -33,7 +33,7 @@ import java.io.IOException;
         )
 )
 public class Application {
-    private static Logger LOGGER = LoggerFactory.getLogger(Application.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
 
     @Autowired
     private CountryCodeCache countryCodeCache;
@@ -72,7 +72,7 @@ public class Application {
 
     public static void initializeUnirestObjectMapper() {
         Unirest.config().setObjectMapper(new ObjectMapper() {
-            private com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            private final com.fasterxml.jackson.databind.ObjectMapper jacksonObjectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
             @Override
             public <T> T readValue(String value, Class<T> valueType) {
