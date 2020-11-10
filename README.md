@@ -1,4 +1,4 @@
-The Noregian TOOP DC/DP (The Once-Only Principle, Data Consumer/Data Provider) uses [toop-connector-ng](https://github.com/TOOP4EU/toop-connector-ng) and its built-in in-memory AS4 (phase4).
+The Norwegian TOOP DC/DP (The Once-Only Principle, Data Consumer/Data Provider) uses [toop-connector-ng](https://github.com/TOOP4EU/toop-connector-ng) and its built-in in-memory AS4 (phase4).
 
 # toop-smp
 toop-smp is basically the dockerimage phelger/phoss-smp-xml:latest rebuilt with Norwegian settings.
@@ -116,6 +116,6 @@ truststore.password = <password>
 - Under Business Cards, create a new Business Card and make sure it is pushed to PEPPOL Directory
 - Under Service Groups, create a Service Group with Identifier Scheme="iso6523-actorid-upis" and Identifier Value="9999:norway2"
 - Under Endpoints, create two endpoints (one for DP, one for DC)
-    - DP: DocTypeId "toop-doctypeid-qns":"RegisteredOrganization::REGISTERED_ORGANIZATION_TYPE::CONCEPT##CCCEV::toop-edm:v2.0", ProcessId "toop-procid-agreement":"urn:eu.toop.process.dataquery", Transport "CEF AS4", Endpoint "https://toop-connector.brreg.no/phase4" and Certificate = a dump of the certificate
-    - DC: DocTypeId "toop-doctypeid-qns":"QueryResponse::toop-edm:v2.0" (the rest is identical to DP)
+    - DP: DocTypeId "toop-doctypeid-qns":"RegisteredOrganization::REGISTERED_ORGANIZATION_TYPE::CONCEPT##CCCEV::toop-edm:v2.1", ProcessId "toop-procid-agreement":"urn:eu.toop.process.dataquery", Transport "CEF AS4", Endpoint "https://toop-connector.brreg.no/phase4" and Certificate = a dump of the certificate
+    - DC: DocTypeId "toop-doctypeid-qns":"QueryResponse::toop-edm:v2.1" (the rest is identical to DP)
        
