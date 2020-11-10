@@ -23,7 +23,7 @@
         <maven.exec.skip>false</maven.exec.skip>
         <!--end standard properties-->
 
-        <toop.connector.version>2.1.0</toop.connector.version>
+        <toop.connector.version>2.1.0-1</toop.connector.version>
         <swagger.version>2.9.2</swagger.version>
     </properties>
 
