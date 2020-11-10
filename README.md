@@ -2,7 +2,7 @@ The Norwegian TOOP DC/DP (The Once-Only Principle, Data Consumer/Data Provider) 
 
 # toop-smp
 toop-smp is basically the dockerimage phelger/phoss-smp-xml:latest rebuilt with Norwegian settings.
-When building with "mvn clean install", dockerfile will copy keystore ans truststore into /config and generate the quay.apps.ocp-svc.base.brreg.no/toop/toop-smp:latest docker image. The actual config files, which contains passwords, are stored as OpenShift Secrets. These insists on being unpacked to unique directories, which explains why dockerfile sets environment variables for the config files to some mysterious paths. When deploying toop-smp:latest to OpenShift, Secrets are unpacked to these directories.
+When building with "mvn clean install", dockerfile will copy keystore and truststore into /config and generate the quay.apps.ocp-svc.base.brreg.no/toop/toop-smp:latest docker image. The actual config files, which contains passwords, are stored as OpenShift Secrets. These insists on being unpacked to unique directories, which explains why dockerfile sets environment variables for the config files to some mysterious paths. When deploying toop-smp:latest to OpenShift, Secrets are unpacked to these directories.
 
 _(For internal use: The OpenShift regsys-prd environment, including Secrets, is defined in https://bitbucket.brreg.no/scm/openshift-appconfig/toop.git . After modifying a property file, execute regsys-prd/-/secrets/krypter.sh to regenerate Secrets)_
 
