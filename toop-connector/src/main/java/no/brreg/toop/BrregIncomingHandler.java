@@ -483,7 +483,7 @@ public class BrregIncomingHandler implements IMEIncomingHandler {
             try {
                 DnsjavaInit.initWithCustomDNSServers(new CommonsArrayList<>(dnsServer));
                 endpointType = TCAPIHelper.querySMPEndpoint(receiverId, docTypeIdentifier, processIdentifier, transportProtocol);
-                break;
+                break; //We have got a response. Break out of for-loop
             } catch (Exception e) {
                 loggerHandler.log(LoggerHandler.Level.INFO, "Resolve using "+dnsServer.toString()+" failed: " + e.getMessage());
             }
