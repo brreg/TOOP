@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
 import kong.unirest.ObjectMapper;
 import kong.unirest.Unirest;
+import no.brreg.toop.handler.ToopIncomingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ public class Application {
     private CountryCodeCache countryCodeCache;
 
     @Autowired
-    private BrregIncomingHandler brregIncomingHandler;
+    private ToopIncomingHandler toopIncomingHandler;
 
     @Autowired
     private ServletContext servletContext;
@@ -60,7 +61,7 @@ public class Application {
     private void initializeToopConnector() {
         LOGGER.info("Initializing toop connector");
         WebScopeManager.onGlobalBegin(servletContext);
-        TCInit.initGlobally(servletContext, brregIncomingHandler);
+        TCInit.initGlobally(servletContext, toopIncomingHandler);
     }
 
     @PreDestroy

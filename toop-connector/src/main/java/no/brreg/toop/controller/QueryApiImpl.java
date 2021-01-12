@@ -2,7 +2,7 @@ package no.brreg.toop.controller;
 
 // This code is Public Domain. See LICENSE
 
-import no.brreg.toop.BrregIncomingHandler;
+import no.brreg.toop.handler.ToopIncomingHandler;
 import no.brreg.toop.CountryCodeCache;
 import no.brreg.toop.generated.model.CountryCode;
 import no.brreg.toop.generated.model.Enhet;
@@ -31,7 +31,7 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     private CountryCodeCache countryCodeCache;
 
     @Autowired
-    private BrregIncomingHandler brregIncomingHandler;
+    private ToopIncomingHandler toopIncomingHandler;
 
 
     @Override
@@ -52,7 +52,7 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     @Override
     public ResponseEntity<Enhet> getByLegalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String legalperson) {
         try {
-            final BrregIncomingHandler.ToopResponse toopResponse = brregIncomingHandler.getByIdentifier(countrycode, legalperson, new HashMap<>(), true);
+            final ToopIncomingHandler.ToopResponse toopResponse = toopIncomingHandler.getByIdentifier(countrycode, legalperson, new HashMap<>(), true);
             HttpStatus status = toopResponse==null ? HttpStatus.NOT_FOUND : toopResponse.getStatus();
             final String errorMessage = toopResponse==null ? null : toopResponse.getErrorMessage();
             if (status == HttpStatus.OK && toopResponse.getEnhet()==null) {
@@ -89,7 +89,7 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
             if (birthdate!=null) {
                 properties.put("birthdate", birthdate);
             }
-            final BrregIncomingHandler.ToopResponse toopResponse = brregIncomingHandler.getByIdentifier(countrycode, naturalperson, properties, false);
+            final ToopIncomingHandler.ToopResponse toopResponse = toopIncomingHandler.getByIdentifier(countrycode, naturalperson, properties, false);
             HttpStatus status = toopResponse==null ? HttpStatus.NOT_FOUND : toopResponse.getStatus();
             final String errorMessage = toopResponse==null ? null : toopResponse.getErrorMessage();
             if (status == HttpStatus.OK && toopResponse.getEnhet()==null) {
