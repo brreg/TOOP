@@ -2,8 +2,9 @@ package no.brreg.toop.controller;
 
 // This code is Public Domain. See LICENSE
 
+import no.brreg.toop.generated.model.QueryType;
 import no.brreg.toop.handler.ToopIncomingHandler;
-import no.brreg.toop.CountryCodeCache;
+import no.brreg.toop.caches.CountryCodeCache;
 import no.brreg.toop.generated.model.CountryCode;
 import no.brreg.toop.generated.model.Enhet;
 import org.slf4j.Logger;
@@ -35,9 +36,9 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
 
 
     @Override
-    public ResponseEntity<List<CountryCode>> getCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response) {
+    public ResponseEntity<List<CountryCode>> getCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response, QueryType type) {
         try {
-            List<CountryCode> countryCodes = countryCodeCache.getCountryCodes();
+            List<CountryCode> countryCodes = countryCodeCache.getCountryCodes(type);
             if (countryCodes==null || countryCodes.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {

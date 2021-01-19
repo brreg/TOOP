@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
 import kong.unirest.ObjectMapper;
 import kong.unirest.Unirest;
+import no.brreg.toop.caches.CountryCodeCache;
+import no.brreg.toop.generated.model.QueryType;
 import no.brreg.toop.handler.ToopIncomingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +58,8 @@ public class Application {
 
     public void initializeApplication() {
         initializeToopConnector();
-        countryCodeCache.update();
+        countryCodeCache.update(QueryType.GBM);
+        countryCodeCache.update(QueryType.EPROCUREMENT);
     }
     private void initializeToopConnector() {
         LOGGER.info("Initializing toop connector");

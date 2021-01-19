@@ -2,10 +2,11 @@ package no.brreg.toop.handler;
 
 // This code is Public Domain. See LICENSE
 
+import com.helger.peppolid.IDocumentTypeIdentifier;
 import eu.toop.connector.api.me.incoming.*;
 import eu.toop.edm.EDMErrorResponse;
-import no.brreg.toop.CountryCodeCache;
-import no.brreg.toop.EnhetsregisterCache;
+import no.brreg.toop.caches.CountryCodeCache;
+import no.brreg.toop.caches.EnhetsregisterCache;
 import no.brreg.toop.LoggerHandler;
 import no.brreg.toop.generated.model.*;
 import org.slf4j.Logger;
@@ -116,14 +117,26 @@ public class ToopIncomingHandler implements IMEIncomingHandler {
 
     @Override
     public void handleIncomingRequest(@Nonnull IncomingEDMRequest incomingEDMRequest) throws MEIncomingException {
-        //TODO, support eProcurement
-        new BRREGGBMHandler(this).handleIncomingRequest(incomingEDMRequest);
+        IDocumentTypeIdentifier requestedDocumentType = incomingEDMRequest.getMetadata().getDocumentTypeID();
+        if (BRREGGBMHandler.matchesDocumentType(requestedDocumentType)) {
+            new BRREGGBMHandler(this).handleIncomingRequest(incomingEDMRequest);
+        } else if (BRREGeProcurementHandler.matchesDocumentType(requestedDocumentType)) {
+            new BRREGeProcurementHandler(this).handleIncomingRequest(incomingEDMRequest);
+        } else {
+            LOGGER.info("Unexpected incoming request document type: {}", requestedDocumentType.getScheme()+"#"+requestedDocumentType.getValue());
+        }
     }
 
     @Override
     public void handleIncomingResponse(@Nonnull IncomingEDMResponse incomingEDMResponse) throws MEIncomingException {
-        //TODO, support eProcurement
-        new BRREGGBMHandler(this).handleIncomingResponse(incomingEDMResponse);
+        IDocumentTypeIdentifier responseDocumentType = incomingEDMResponse.getMetadata().getDocumentTypeID();
+        if (BRREGGBMHandler.matchesDocumentType(responseDocumentType)) {
+            new BRREGGBMHandler(this).handleIncomingResponse(incomingEDMResponse);
+        } else if (BRREGeProcurementHandler.matchesDocumentType(responseDocumentType)) {
+            new BRREGeProcurementHandler(this).handleIncomingResponse(incomingEDMResponse);
+        } else {
+            LOGGER.info("Unexpected incoming response document type: {}", responseDocumentType.getScheme()+"#"+responseDocumentType.getValue());
+        }
     }
 
     @Override

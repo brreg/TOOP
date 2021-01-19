@@ -1,5 +1,7 @@
 package no.brreg.toop.handler;
 
+// This code is Public Domain. See LICENSE
+
 import com.helger.commons.collection.impl.CommonsArrayList;
 import com.helger.dns.dnsjava.DnsjavaInit;
 import com.helger.dns.ip.IPV4Addr;
@@ -17,6 +19,7 @@ import no.brreg.toop.LoggerHandler;
 import no.brreg.toop.generated.model.Adresse;
 import no.brreg.toop.generated.model.CountryCode;
 import no.brreg.toop.generated.model.Enhet;
+import no.brreg.toop.generated.model.QueryType;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -32,6 +35,7 @@ import java.time.format.DateTimeParseException;
 
 public abstract class BRREGBaseHandler {
 
+    private QueryType queryType;
     private ToopIncomingHandler toopIncomingHandler;
 
     public static final String NORWEGIAN_COUNTRYCODE = "NO";
@@ -44,8 +48,13 @@ public abstract class BRREGBaseHandler {
 
     private BRREGBaseHandler() {}
 
-    public BRREGBaseHandler(final ToopIncomingHandler toopIncomingHandler) {
+    public BRREGBaseHandler(final QueryType queryType, final ToopIncomingHandler toopIncomingHandler) {
+        this.queryType = queryType;
         this.toopIncomingHandler = toopIncomingHandler;
+    }
+
+    public QueryType getQueryType() {
+        return queryType;
     }
 
     public ToopIncomingHandler getToopIncomingHandler() {
@@ -101,7 +110,7 @@ public abstract class BRREGBaseHandler {
     }
 
     protected AgentPojo norway() {
-        CountryCode norway = toopIncomingHandler.getCountryCodeCache().getCountryCode(NORWEGIAN_COUNTRYCODE);
+        CountryCode norway = toopIncomingHandler.getCountryCodeCache().getCountryCode(getQueryType(), NORWEGIAN_COUNTRYCODE);
         if (norway == null) {
             toopIncomingHandler.getLoggerHandler().log(LoggerHandler.Level.ERROR, "Could not find Norway in CountryCode cache!");
             return null;

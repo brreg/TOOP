@@ -1,4 +1,4 @@
-package no.brreg.toop;
+package no.brreg.toop.caches;
 
 // This code is Public Domain. See LICENSE
 

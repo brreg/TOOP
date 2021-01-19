@@ -22,6 +22,13 @@ paths:
     get:
       description: Query for valid country codes
       operationId: getCountryCodes
+      parameters:
+        - name: type
+          in: query
+          description: The TOOP type (GBM, eProcurement)
+          required: true
+          schema:
+            $ref: "#/components/schemas/QueryType"
       responses:
         '200':
           description: OK
@@ -274,3 +281,8 @@ components:
       properties:
         name:
           type: string
+    QueryType:
+      type: string
+      enum:
+        - GBM
+        - eProcurement
