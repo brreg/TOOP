@@ -42,15 +42,20 @@ import java.util.Map;
 
 public class BRREGGBMHandler extends BRREGBaseHandler {
 
-    public static final IDocumentTypeIdentifier DOCUMENT_TYPE = SimpleIdentifierFactory.INSTANCE.createDocumentTypeIdentifier("toop-doctypeid-qns", "RegisteredOrganization::REGISTERED_ORGANIZATION_TYPE::CONCEPT##CCCEV::toop-edm:v2.1");
+    public static final IDocumentTypeIdentifier REQUEST_DOCUMENT_TYPE = SimpleIdentifierFactory.INSTANCE.createDocumentTypeIdentifier("toop-doctypeid-qns", "RegisteredOrganization::REGISTERED_ORGANIZATION_TYPE::CONCEPT##CCCEV::toop-edm:v2.1");
+    public static final IDocumentTypeIdentifier RESPONSE_DOCUMENT_TYPE = SimpleIdentifierFactory.INSTANCE.createDocumentTypeIdentifier("toop-doctypeid-qns", "QueryResponse::toop-edm:v2.1");
 
 
     public BRREGGBMHandler(final ToopIncomingHandler toopIncomingHandler) {
         super(QueryType.GBM, toopIncomingHandler);
     }
 
-    static boolean matchesDocumentType(IDocumentTypeIdentifier documentTypeIdentifier) {
-        return (documentTypeIdentifier!=null && documentTypeIdentifier.hasSameContent(DOCUMENT_TYPE));
+    static boolean matchesRequestDocumentType(IDocumentTypeIdentifier documentTypeIdentifier) {
+        return (documentTypeIdentifier!=null && documentTypeIdentifier.hasSameContent(REQUEST_DOCUMENT_TYPE));
+    }
+
+    static boolean matchesResponseDocumentType(IDocumentTypeIdentifier documentTypeIdentifier) {
+        return (documentTypeIdentifier!=null && documentTypeIdentifier.hasSameContent(RESPONSE_DOCUMENT_TYPE));
     }
 
     public void handleIncomingRequest(final IncomingEDMRequest incomingEDMRequest) {

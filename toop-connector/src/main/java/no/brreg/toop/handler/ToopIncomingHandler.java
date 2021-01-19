@@ -118,9 +118,9 @@ public class ToopIncomingHandler implements IMEIncomingHandler {
     @Override
     public void handleIncomingRequest(@Nonnull IncomingEDMRequest incomingEDMRequest) throws MEIncomingException {
         IDocumentTypeIdentifier requestedDocumentType = incomingEDMRequest.getMetadata().getDocumentTypeID();
-        if (BRREGGBMHandler.matchesDocumentType(requestedDocumentType)) {
+        if (BRREGGBMHandler.matchesRequestDocumentType(requestedDocumentType)) {
             new BRREGGBMHandler(this).handleIncomingRequest(incomingEDMRequest);
-        } else if (BRREGeProcurementHandler.matchesDocumentType(requestedDocumentType)) {
+        } else if (BRREGeProcurementHandler.matchesRequestDocumentType(requestedDocumentType)) {
             new BRREGeProcurementHandler(this).handleIncomingRequest(incomingEDMRequest);
         } else {
             LOGGER.info("Unexpected incoming request document type: {}", requestedDocumentType.getScheme()+"#"+requestedDocumentType.getValue());
@@ -130,9 +130,9 @@ public class ToopIncomingHandler implements IMEIncomingHandler {
     @Override
     public void handleIncomingResponse(@Nonnull IncomingEDMResponse incomingEDMResponse) throws MEIncomingException {
         IDocumentTypeIdentifier responseDocumentType = incomingEDMResponse.getMetadata().getDocumentTypeID();
-        if (BRREGGBMHandler.matchesDocumentType(responseDocumentType)) {
+        if (BRREGGBMHandler.matchesResponseDocumentType(responseDocumentType)) {
             new BRREGGBMHandler(this).handleIncomingResponse(incomingEDMResponse);
-        } else if (BRREGeProcurementHandler.matchesDocumentType(responseDocumentType)) {
+        } else if (BRREGeProcurementHandler.matchesResponseDocumentType(responseDocumentType)) {
             new BRREGeProcurementHandler(this).handleIncomingResponse(incomingEDMResponse);
         } else {
             LOGGER.info("Unexpected incoming response document type: {}", responseDocumentType.getScheme()+"#"+responseDocumentType.getValue());

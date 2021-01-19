@@ -47,9 +47,9 @@ public class CountryCodes {
     private String lookupUrlForQueryType() {
         try {
             if (queryType == QueryType.GBM) {
-                return LOOKUP_URL+ URLEncoder.encode(BRREGGBMHandler.DOCUMENT_TYPE.getScheme()+"::"+BRREGGBMHandler.DOCUMENT_TYPE.getValue(), "utf-8");
+                return LOOKUP_URL+ URLEncoder.encode(BRREGGBMHandler.REQUEST_DOCUMENT_TYPE.getScheme()+"::"+BRREGGBMHandler.REQUEST_DOCUMENT_TYPE.getValue(), "utf-8");
             } else if (queryType == QueryType.EPROCUREMENT) {
-                return LOOKUP_URL+ URLEncoder.encode(BRREGeProcurementHandler.DOCUMENT_TYPE.getScheme()+"::"+BRREGeProcurementHandler.DOCUMENT_TYPE.getValue(), "utf-8");
+                return LOOKUP_URL+ URLEncoder.encode(BRREGeProcurementHandler.REQUEST_DOCUMENT_TYPE.getScheme()+"::"+BRREGeProcurementHandler.REQUEST_DOCUMENT_TYPE.getValue(), "utf-8");
             }
         } catch(Exception e) {
             LOGGER.error("Got error:", e);
