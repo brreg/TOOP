@@ -58,9 +58,10 @@ public class Application {
 
     public void initializeApplication() {
         initializeToopConnector();
-        countryCodeCache.update(QueryType.GBM);
+        countryCodeCache.update(QueryType.GBM); //Will register this QueryType and update its cache of registered country codes
         countryCodeCache.update(QueryType.EPROCUREMENT);
     }
+
     private void initializeToopConnector() {
         LOGGER.info("Initializing toop connector");
         WebScopeManager.onGlobalBegin(servletContext);
