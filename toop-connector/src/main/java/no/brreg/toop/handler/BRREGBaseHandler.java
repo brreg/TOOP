@@ -78,7 +78,11 @@ public abstract class BRREGBaseHandler {
             try {
                 DnsjavaInit.initWithCustomDNSServers(new CommonsArrayList<>(dnsServer));
                 endpointType = TCAPIHelper.querySMPEndpoint(receiverId, docTypeIdentifier, processIdentifier, transportProtocol);
-                break; //We have got a response. Break out of for-loop
+                if (endpointType == null) {
+                    toopIncomingHandler.getLoggerHandler().log(LoggerHandler.Level.INFO, "Resolve using "+dnsServer.toString()+" completed, but returned NULL");
+                } else {
+                    break; //We have got a response. Break out of for-loop
+                }
             } catch (Exception e) {
                 toopIncomingHandler.getLoggerHandler().log(LoggerHandler.Level.INFO, "Resolve using "+dnsServer.toString()+" failed: " + e.getMessage());
             }
