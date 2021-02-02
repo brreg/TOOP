@@ -23,10 +23,12 @@
         <maven.exec.skip>false</maven.exec.skip>
         <!--end standard properties-->
 
-        <toop.connector.version>2.1.1</toop.connector.version>
+        <toop.connector.version>2.1.1</toop.connector.version> <!-- See comment a few lines down -->
         <swagger.version>2.9.2</swagger.version>
     </properties>
-    
+
+    <!-- Temporary fix for DNS in tc-main 2.1.1.
+         Remove entire dependencyManagement when upgrading toop.connector.version to a new version -->
     <dependencyManagement>
         <dependencies>
             <dependency>
