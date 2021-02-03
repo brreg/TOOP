@@ -61,8 +61,8 @@ public class CountryCodes {
         this.queryType = queryType;
     }
 
-    void update() {
-        if (cacheTime!=null && cacheTime.plus(CACHE_VALID_DURATION).isAfter(LocalDateTime.now())) {
+    void update(final boolean force) {
+        if (!force && cacheTime!=null && cacheTime.plus(CACHE_VALID_DURATION).isAfter(LocalDateTime.now())) {
             return; //Cache is still valid
         }
 
@@ -118,7 +118,7 @@ public class CountryCodes {
     }
 
     List<CountryCode> getCountryCodes() {
-        update();
+        update(false);
         synchronized(countryCodesLock) {
             return new ArrayList<>(countryCodes.values());
         }

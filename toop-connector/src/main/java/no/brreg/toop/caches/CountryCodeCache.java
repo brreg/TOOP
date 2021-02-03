@@ -28,7 +28,7 @@ public class CountryCodeCache {
     }
 
     public void update(final QueryType type) {
-        getCountryCodesMap(type).update();
+        getCountryCodesMap(type).update(true);
     }
 
     public List<CountryCode> getCountryCodes(final QueryType type) {
