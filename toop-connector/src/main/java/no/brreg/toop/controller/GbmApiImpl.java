@@ -25,8 +25,8 @@ import java.util.Map;
 
 @Controller
 @RestControllerAdvice
-public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
-    private static final Logger LOGGER = LoggerFactory.getLogger(QueryApiImpl.class);
+public class GbmApiImpl implements no.brreg.toop.generated.api.GbmApi {
+    private static final Logger LOGGER = LoggerFactory.getLogger(GbmApiImpl.class);
 
     @Autowired
     private CountryCodeCache countryCodeCache;
@@ -36,9 +36,9 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
 
 
     @Override
-    public ResponseEntity<List<CountryCode>> getCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response, QueryType type) {
+    public ResponseEntity<List<CountryCode>> getGBMCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response) {
         try {
-            List<CountryCode> countryCodes = countryCodeCache.getCountryCodes(type);
+            List<CountryCode> countryCodes = countryCodeCache.getCountryCodes(QueryType.GBM);
             if (countryCodes==null || countryCodes.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {
@@ -51,7 +51,7 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     }
 
     @Override
-    public ResponseEntity<Enhet> getByLegalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String legalperson) {
+    public ResponseEntity<Enhet> getGBMByLegalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String legalperson) {
         try {
             final ToopIncomingHandler.ToopResponse toopResponse = toopIncomingHandler.getByIdentifier(countrycode, legalperson, new HashMap<>(), true);
             HttpStatus status = toopResponse==null ? HttpStatus.NOT_FOUND : toopResponse.getStatus();
@@ -77,7 +77,7 @@ public class QueryApiImpl implements no.brreg.toop.generated.api.QueryApi {
     }
 
     @Override
-    public ResponseEntity<Enhet> getByNaturalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response,
+    public ResponseEntity<Enhet> getGBMByNaturalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response,
                                                     String countrycode, String naturalperson, String firstname, String lastname, LocalDate birthdate) {
         try {
             Map<String,Object> properties = new HashMap<>();

@@ -18,17 +18,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Log"
-  /query:
+  /gbm/query:
     get:
-      description: Query for valid country codes
-      operationId: getCountryCodes
-      parameters:
-        - name: type
-          in: query
-          description: The TOOP type (GBM, eProcurement)
-          required: true
-          schema:
-            $ref: "#/components/schemas/QueryType"
+      description: Query for valid GBM country codes
+      operationId: getGBMCountryCodes
       responses:
         '200':
           description: OK
@@ -38,10 +31,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CountryCode"
-  /query/LP/{countrycode}/{legalperson}:
+  /gbm/query/LP/{countrycode}/{legalperson}:
     get:
       description: Query for a given Legal Person
-      operationId: getByLegalPerson
+      operationId: getGBMByLegalPerson
       parameters:
         - name: countrycode
           in: path
@@ -62,10 +55,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Enhet"
-  /query/NP/{countrycode}/{naturalperson}:
+  /gbm/query/NP/{countrycode}/{naturalperson}:
     get:
       description: Query for a given Natural Person
-      operationId: getByNaturalPerson
+      operationId: getGBMByNaturalPerson
       parameters:
         - name: countrycode
           in: path
@@ -105,6 +98,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Enhet"
+  /eprocurement/query:
+    get:
+      description: Query for valid eProcurement country codes
+      operationId: getEProcurementCountryCodes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CountryCode"
 components:
   schemas:
     Log:

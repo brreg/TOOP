@@ -77,13 +77,19 @@ public class ToopIncomingHandler implements IMEIncomingHandler {
         }
     }
 
-    private class ToopRequest {
+    class ToopRequest {
+        private final BRREGBaseHandler handler;
         private final String id;
         private final Object lock = new Object();
         private final ToopResponse response = new ToopResponse();
 
-        public ToopRequest(final String id) {
+        public ToopRequest(final BRREGBaseHandler handler, final String id) {
+            this.handler = handler;
             this.id = id;
+        }
+
+        public BRREGBaseHandler getHandler() {
+            return handler;
         }
 
         public String getId() {
@@ -130,10 +136,8 @@ public class ToopIncomingHandler implements IMEIncomingHandler {
     @Override
     public void handleIncomingResponse(@Nonnull IncomingEDMResponse incomingEDMResponse) throws MEIncomingException {
         IDocumentTypeIdentifier responseDocumentType = incomingEDMResponse.getMetadata().getDocumentTypeID();
-        if (BRREGGBMHandler.matchesResponseDocumentType(responseDocumentType)) {
-            new BRREGGBMHandler(this).handleIncomingResponse(incomingEDMResponse);
-        } else if (BRREGeProcurementHandler.matchesResponseDocumentType(responseDocumentType)) {
-            new BRREGeProcurementHandler(this).handleIncomingResponse(incomingEDMResponse);
+        if (BRREGGenericResponseHandler.matchesResponseDocumentType(responseDocumentType)) {
+            new BRREGGenericResponseHandler(this).handleIncomingResponse(incomingEDMResponse);
         } else {
             LOGGER.info("Unexpected incoming response document type: {}", responseDocumentType.getScheme()+"#"+responseDocumentType.getValue());
         }
@@ -152,8 +156,14 @@ public class ToopIncomingHandler implements IMEIncomingHandler {
     }
 
 
-    public ToopResponse addPendingRequest(final String requestId) {
-        ToopRequest request = new ToopRequest(requestId);
+    public ToopRequest getPendingRequest(final String requestId) {
+        synchronized (requestMapLock) {
+            return requestMap.get(requestId);
+        }
+    }
+
+    public ToopResponse addPendingRequest(final BRREGBaseHandler handler, final String requestId) {
+        ToopRequest request = new ToopRequest(handler, requestId);
         try {
             synchronized(requestMapLock) {
                 requestMap.put(request.getId(), request);
@@ -190,6 +200,6 @@ public class ToopIncomingHandler implements IMEIncomingHandler {
                 }
             }
         }
-
     }
+
 }

@@ -43,7 +43,6 @@ import java.util.Map;
 public class BRREGGBMHandler extends BRREGBaseHandler {
 
     public static final IDocumentTypeIdentifier REQUEST_DOCUMENT_TYPE = SimpleIdentifierFactory.INSTANCE.createDocumentTypeIdentifier("toop-doctypeid-qns", "RegisteredOrganization::REGISTERED_ORGANIZATION_TYPE::CONCEPT##CCCEV::toop-edm:v2.1");
-    public static final IDocumentTypeIdentifier RESPONSE_DOCUMENT_TYPE = SimpleIdentifierFactory.INSTANCE.createDocumentTypeIdentifier("toop-doctypeid-qns", "QueryResponse::toop-edm:v2.1");
 
 
     public BRREGGBMHandler(final ToopIncomingHandler toopIncomingHandler) {
@@ -54,16 +53,12 @@ public class BRREGGBMHandler extends BRREGBaseHandler {
         return (documentTypeIdentifier!=null && documentTypeIdentifier.hasSameContent(REQUEST_DOCUMENT_TYPE));
     }
 
-    static boolean matchesResponseDocumentType(IDocumentTypeIdentifier documentTypeIdentifier) {
-        return (documentTypeIdentifier!=null && documentTypeIdentifier.hasSameContent(RESPONSE_DOCUMENT_TYPE));
-    }
-
     public void handleIncomingRequest(final IncomingEDMRequest incomingEDMRequest) {
         final EDMRequest edmRequest = incomingEDMRequest.getRequest();
 
         //Is this a request we support?
         if (!(edmRequest.getPayloadProvider() instanceof IEDMRequestPayloadConcepts)) {
-            sendIncomingRequestFailed("Cannot create TOOP response for DocumentRequest: "+edmRequest.getPayloadProvider().getClass().getSimpleName());
+            sendIncomingRequestFailed("Cannot create TOOP response for GBM DocumentRequest: "+edmRequest.getPayloadProvider().getClass().getSimpleName());
             return;
         }
 
@@ -450,7 +445,7 @@ public class BRREGGBMHandler extends BRREGBaseHandler {
             return new ToopIncomingHandler.ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, msg);
         }
 
-        return getToopIncomingHandler().addPendingRequest(edmRequest.getRequestID());
+        return getToopIncomingHandler().addPendingRequest(this, edmRequest.getRequestID());
     }
 
 }
