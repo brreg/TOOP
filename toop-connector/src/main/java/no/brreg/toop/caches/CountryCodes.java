@@ -97,7 +97,8 @@ public class CountryCodes {
                                         CountryCode countryCode = new CountryCode()
                                                 .id(countryCodeMatch.getParticipantID().getValue())
                                                 .code(entity.getCountryCode())
-                                                .name(entity.getName().get(0).getName());
+                                                .name(entity.getName().get(0).getName())
+                                                .docTypes(countryCodeMatch.getDocTypes());
                                         countryCodes.put(countryCode.getCode(), countryCode);
                                         LOGGER.info("Found country id={}, code={}, name={}", countryCode.getId(), countryCode.getCode(), countryCode.getName());
                                     }

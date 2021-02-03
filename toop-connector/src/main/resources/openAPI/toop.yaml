@@ -238,6 +238,10 @@ components:
             type: string
           name:
             type: string
+          docTypes:
+            type: array
+            items:
+              $ref: "#/components/schemas/CountryCodeDocType"
     CountryCodeResult:
       type: object
       properties:
@@ -262,11 +266,22 @@ components:
       properties:
         participantID:
           $ref: "#/components/schemas/CountryCodeParticipant"
+        docTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountryCodeDocType"
         entities:
           type: array
           items:
             $ref: "#/components/schemas/CountryCodeParticipantEntity"
     CountryCodeParticipant:
+      type: object
+      properties:
+        scheme:
+          type: string
+        value:
+          type: string
+    CountryCodeDocType:
       type: object
       properties:
         scheme:
