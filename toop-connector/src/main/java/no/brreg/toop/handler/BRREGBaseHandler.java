@@ -114,7 +114,7 @@ public abstract class BRREGBaseHandler {
     }
 
     protected AgentPojo norway() {
-        CountryCode norway = toopIncomingHandler.getCountryCodeCache().getCountryCode(getQueryType(), NORWEGIAN_COUNTRYCODE);
+        CountryCode norway = toopIncomingHandler.getCountryCodeCache().getCountryCode(NORWEGIAN_COUNTRYCODE);
         if (norway == null) {
             toopIncomingHandler.getLoggerHandler().log(LoggerHandler.Level.ERROR, "Could not find Norway in CountryCode cache!");
             return null;

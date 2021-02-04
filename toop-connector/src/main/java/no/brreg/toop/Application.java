@@ -11,7 +11,6 @@ import io.swagger.v3.oas.annotations.info.Info;
 import kong.unirest.ObjectMapper;
 import kong.unirest.Unirest;
 import no.brreg.toop.caches.CountryCodeCache;
-import no.brreg.toop.generated.model.QueryType;
 import no.brreg.toop.handler.ToopIncomingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,8 +57,7 @@ public class Application {
 
     public void initializeApplication() {
         initializeToopConnector();
-        countryCodeCache.update(QueryType.GBM); //Will register this QueryType and update its cache of registered country codes
-        countryCodeCache.update(QueryType.EPROCUREMENT);
+        countryCodeCache.update(true);
     }
 
     private void initializeToopConnector() {

@@ -27,7 +27,7 @@ import eu.toop.edm.response.IEDMResponsePayloadConcepts;
 import eu.toop.edm.response.IEDMResponsePayloadProvider;
 import eu.toop.regrep.ERegRepResponseStatus;
 import no.brreg.toop.LoggerHandler;
-import no.brreg.toop.caches.CountryCodes;
+import no.brreg.toop.caches.CountryCodeCache;
 import no.brreg.toop.generated.model.*;
 import org.springframework.http.HttpStatus;
 
@@ -350,22 +350,22 @@ public class BRREGGBMHandler extends BRREGBaseHandler {
     }
 
     public ToopIncomingHandler.ToopResponse getByIdentifier(final String countrycode, final String identifier, final Map<String,Object> properties, final boolean isLegalPerson) {
-        CountryCode norway = getToopIncomingHandler().getCountryCodeCache().getCountryCode(getQueryType(), NORWEGIAN_COUNTRYCODE);
+        CountryCode norway = getToopIncomingHandler().getCountryCodeCache().getCountryCode(NORWEGIAN_COUNTRYCODE);
         if (norway == null) {
             final String msg = "Could not find Norway in CountryCode cache!";
             getToopIncomingHandler().getLoggerHandler().log(LoggerHandler.Level.ERROR, msg);
             return new ToopIncomingHandler.ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, msg);
         }
 
-        CountryCode receiverCountry = getToopIncomingHandler().getCountryCodeCache().getCountryCode(getQueryType(), countrycode);
+        CountryCode receiverCountry = getToopIncomingHandler().getCountryCodeCache().getCountryCode(countrycode);
         if (receiverCountry == null) {
             final String msg = "Could not find code \""+countrycode+"\" in CountryCode cache!";
             getToopIncomingHandler().getLoggerHandler().log(LoggerHandler.Level.ERROR, msg);
             return new ToopIncomingHandler.ToopResponse(HttpStatus.NOT_FOUND, msg);
         }
 
-        IParticipantIdentifier sender = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodes.COUNTRY_SCHEME, norway.getId());
-        IParticipantIdentifier receiver = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodes.COUNTRY_SCHEME, receiverCountry.getId());
+        IParticipantIdentifier sender = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, norway.getId());
+        IParticipantIdentifier receiver = SimpleIdentifierFactory.INSTANCE.createParticipantIdentifier(CountryCodeCache.COUNTRY_SCHEME, receiverCountry.getId());
         final MERoutingInformation meRoutingInformation = getRoutingInformation(EPredefinedDocumentTypeIdentifier.REGISTEREDORGANIZATION_REGISTERED_ORGANIZATION_TYPE_CONCEPT_CCCEV_TOOP_EDM_V2_1,
                 EPredefinedProcessIdentifier.URN_EU_TOOP_PROCESS_DATAQUERY,
                 sender,

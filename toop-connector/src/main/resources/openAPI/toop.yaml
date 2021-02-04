@@ -18,10 +18,10 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Log"
-  /gbm/query:
+  /countrycodes:
     get:
-      description: Query for valid GBM country codes
-      operationId: getGBMCountryCodes
+      description: Query for registered country codes and document types
+      operationId: getCountryCodes
       responses:
         '200':
           description: OK
@@ -98,19 +98,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Enhet"
-  /eprocurement/query:
-    get:
-      description: Query for valid eProcurement country codes
-      operationId: getEProcurementCountryCodes
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/CountryCode"
 components:
   schemas:
     Log:
@@ -242,45 +229,6 @@ components:
             type: array
             items:
               $ref: "#/components/schemas/CountryCodeDocType"
-    CountryCodeResult:
-      type: object
-      properties:
-        total-result-count:
-          type: integer
-        used-result-count:
-          type: integer
-        result-page-index:
-          type: integer
-        result-page-count:
-          type: integer
-        first-result-index:
-          type: integer
-        last-result-index:
-          type: integer
-        matches:
-          type: array
-          items:
-            $ref: "#/components/schemas/CountryCodeMatch"
-    CountryCodeMatch:
-      type: object
-      properties:
-        participantID:
-          $ref: "#/components/schemas/CountryCodeParticipant"
-        docTypes:
-          type: array
-          items:
-            $ref: "#/components/schemas/CountryCodeDocType"
-        entities:
-          type: array
-          items:
-            $ref: "#/components/schemas/CountryCodeParticipantEntity"
-    CountryCodeParticipant:
-      type: object
-      properties:
-        scheme:
-          type: string
-        value:
-          type: string
     CountryCodeDocType:
       type: object
       properties:
@@ -288,20 +236,100 @@ components:
           type: string
         value:
           type: string
-    CountryCodeParticipantEntity:
+    BusinessCardResult:
       type: object
       properties:
-        name:
+          root:
+            $ref: "#/components/schemas/BusinessCardResultRoot"
+    BusinessCardResultRoot:
+      type: object
+      properties:
+        businesscards:
           type: array
+          xml:
+            name: "businesscard"
           items:
-            $ref: "#/components/schemas/CountryCodeParticipantEntityName"
-        countryCode:
+            $ref: "#/components/schemas/BusinessCardResultBusinessCard"
+    BusinessCardResultBusinessCard:
+      type: object
+      properties:
+        participant:
+          $ref: "#/components/schemas/BusinessCardResultParticipant"
+        entities:
+          type: array
+          xml:
+            name: "entity"
+          items:
+            $ref: "#/components/schemas/BusinessCardResultEntity"
+        doctypeids:
+          type: array
+          xml:
+            name: "doctypeid"
+          items:
+            $ref: "#/components/schemas/BusinessCardResultDoctypeid"
+    BusinessCardResultParticipant:
+      type: object
+      properties:
+        scheme:
           type: string
-    CountryCodeParticipantEntityName:
+          xml:
+            attribute: true
+        value:
+          type: string
+          xml:
+            attribute: true
+    BusinessCardResultEntity:
+      type: object
+      properties:
+        countrycode:
+          type: string
+          xml:
+            attribute: true
+        names:
+          type: array
+          xml:
+            name: "name"
+          items:
+            $ref: "#/components/schemas/BusinessCardResultEntityName"
+        id:
+          $ref: "#/components/schemas/BusinessCardResultEntityId"
+    BusinessCardResultEntityName:
       type: object
       properties:
         name:
           type: string
+          xml:
+            attribute: true
+    BusinessCardResultEntityId:
+      type: object
+      properties:
+        scheme:
+          type: string
+          xml:
+            attribute: true
+        value:
+          type: string
+          xml:
+            attribute: true
+    BusinessCardResultDoctypeid:
+      type: object
+      properties:
+        scheme:
+          type: string
+          xml:
+            attribute: true
+        value:
+          type: string
+          xml:
+            attribute: true
+        displayname:
+          type: string
+          xml:
+            attribute: true
+        deprecated:
+          type: boolean
+          xml:
+            attribute: true
     QueryType:
       type: string
       enum:

@@ -4,8 +4,6 @@ package no.brreg.toop.controller;
 
 import no.brreg.toop.caches.CountryCodeCache;
 import no.brreg.toop.generated.model.CountryCode;
-import no.brreg.toop.generated.model.QueryType;
-import no.brreg.toop.handler.ToopIncomingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,20 +19,17 @@ import java.util.List;
 
 @Controller
 @RestControllerAdvice
-public class EProcurementApiImpl implements no.brreg.toop.generated.api.EprocurementApi {
-    private static final Logger LOGGER = LoggerFactory.getLogger(EProcurementApiImpl.class);
+public class CountryCodesApiImpl implements no.brreg.toop.generated.api.CountrycodesApi {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CountryCodesApiImpl.class);
 
     @Autowired
     private CountryCodeCache countryCodeCache;
 
-    @Autowired
-    private ToopIncomingHandler toopIncomingHandler;
-
 
     @Override
-    public ResponseEntity<List<CountryCode>> getEProcurementCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response) {
+    public ResponseEntity<List<CountryCode>> getCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response) {
         try {
-            List<CountryCode> countryCodes = countryCodeCache.getCountryCodes(QueryType.EPROCUREMENT);
+            List<CountryCode> countryCodes = countryCodeCache.getCountryCodes();
             if (countryCodes==null || countryCodes.isEmpty()) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             } else {

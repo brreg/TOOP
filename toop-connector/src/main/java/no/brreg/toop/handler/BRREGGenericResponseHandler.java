@@ -6,7 +6,6 @@ import com.helger.peppolid.IDocumentTypeIdentifier;
 import com.helger.peppolid.factory.SimpleIdentifierFactory;
 import eu.toop.connector.api.me.incoming.IncomingEDMRequest;
 import eu.toop.connector.api.me.incoming.IncomingEDMResponse;
-import org.springframework.http.HttpStatus;
 
 
 public class BRREGGenericResponseHandler extends BRREGBaseHandler {

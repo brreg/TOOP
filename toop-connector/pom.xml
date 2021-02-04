@@ -79,6 +79,10 @@
             <artifactId>unirest-java</artifactId>
             <version>3.11.10</version>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -147,6 +151,7 @@
                                 <sourceFolder>src/main/java/gen</sourceFolder>
                                 <hideGenerationTimestamp>true</hideGenerationTimestamp>
                                 <java8>true</java8>
+                                <withXml>true</withXml>
                                 <dateLibrary>java8</dateLibrary>
                                 <library>spring-boot</library>
                                 <delegatePattern>false</delegatePattern>

@@ -2,10 +2,7 @@ package no.brreg.toop.controller;
 
 // This code is Public Domain. See LICENSE
 
-import no.brreg.toop.generated.model.QueryType;
 import no.brreg.toop.handler.ToopIncomingHandler;
-import no.brreg.toop.caches.CountryCodeCache;
-import no.brreg.toop.generated.model.CountryCode;
 import no.brreg.toop.generated.model.Enhet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +16,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 
@@ -29,26 +25,8 @@ public class GbmApiImpl implements no.brreg.toop.generated.api.GbmApi {
     private static final Logger LOGGER = LoggerFactory.getLogger(GbmApiImpl.class);
 
     @Autowired
-    private CountryCodeCache countryCodeCache;
-
-    @Autowired
     private ToopIncomingHandler toopIncomingHandler;
 
-
-    @Override
-    public ResponseEntity<List<CountryCode>> getGBMCountryCodes(HttpServletRequest httpServletRequest, HttpServletResponse response) {
-        try {
-            List<CountryCode> countryCodes = countryCodeCache.getCountryCodes(QueryType.GBM);
-            if (countryCodes==null || countryCodes.isEmpty()) {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-            } else {
-                return new ResponseEntity<>(countryCodes, HttpStatus.OK);
-            }
-        } catch (Exception e) {
-            LOGGER.error("getCountryCodes failed: ", e);
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
 
     @Override
     public ResponseEntity<Enhet> getGBMByLegalPerson(HttpServletRequest httpServletRequest, HttpServletResponse response, String countrycode, String legalperson) {
