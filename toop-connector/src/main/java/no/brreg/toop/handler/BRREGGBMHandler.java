@@ -350,14 +350,17 @@ public class BRREGGBMHandler extends BRREGBaseHandler {
     }
 
     public ToopIncomingHandler.ToopResponse getByIdentifier(final String countrycode, final String identifier, final Map<String,Object> properties, final boolean isLegalPerson) {
-        CountryCode norway = getToopIncomingHandler().getCountryCodeCache().getCountryCode(NORWEGIAN_COUNTRYCODE);
+        CountryCode norway = getToopIncomingHandler().getCountryCodeCache().getCountryCodeById(BRREG_TOOP_ID);
         if (norway == null) {
             final String msg = "Could not find Norway in CountryCode cache!";
             getToopIncomingHandler().getLoggerHandler().log(LoggerHandler.Level.ERROR, msg);
             return new ToopIncomingHandler.ToopResponse(HttpStatus.SERVICE_UNAVAILABLE, msg);
         }
 
-        CountryCode receiverCountry = getToopIncomingHandler().getCountryCodeCache().getCountryCode(countrycode);
+        List<CountryCode> receiverCountryCodes = getToopIncomingHandler().getCountryCodeCache().getCountryCode(countrycode, new CountryCodeDocType()
+                                                                                                                                    .scheme(REQUEST_DOCUMENT_TYPE.getScheme())
+                                                                                                                                    .value(REQUEST_DOCUMENT_TYPE.getValue()));
+        CountryCode receiverCountry = (receiverCountryCodes==null || receiverCountryCodes.isEmpty()) ? null : receiverCountryCodes.get(0);
         if (receiverCountry == null) {
             final String msg = "Could not find code \""+countrycode+"\" in CountryCode cache!";
             getToopIncomingHandler().getLoggerHandler().log(LoggerHandler.Level.ERROR, msg);

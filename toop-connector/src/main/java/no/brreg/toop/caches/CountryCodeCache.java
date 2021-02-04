@@ -29,7 +29,7 @@ public class CountryCodeCache {
     private static final TemporalAmount CACHE_VALID_DURATION = Duration.ofHours(12);
     private final AtomicBoolean isUpgradingCache = new AtomicBoolean(false);
 
-    private static final Map<String,CountryCode> countryCodes = new HashMap<>();
+    private static final List<CountryCode> countryCodes = new ArrayList<>();
     private static final Object countryCodesLock = new Object();
 
 
@@ -71,8 +71,7 @@ public class CountryCodeCache {
                                         entity.getNames()!=null &&
                                         !entity.getNames().isEmpty() &&
                                         entity.getNames().get(0).getName()!=null &&
-                                        !entity.getNames().get(0).getName().isEmpty() &&
-                                        !countryCodes.containsKey(entity.getCountrycode())) {
+                                        !entity.getNames().get(0).getName().isEmpty()) {
                                         CountryCode countryCode = new CountryCode()
                                                                         .id(businessCard.getParticipant().getValue())
                                                                         .code(entity.getCountrycode())
@@ -88,7 +87,7 @@ public class CountryCodeCache {
                                         }
                                         countryCode.docTypes(docTypes);
 
-                                        countryCodes.put(countryCode.getCode(), countryCode);
+                                        countryCodes.add(countryCode);
                                         LOGGER.info("Found country id={}, code={}, name={}", countryCode.getId(), countryCode.getCode(), countryCode.getName());
                                     }
                                 }
@@ -110,13 +109,53 @@ public class CountryCodeCache {
     public List<CountryCode> getCountryCodes() {
         update(false);
         synchronized(countryCodesLock) {
-            return new ArrayList<>(countryCodes.values());
+            return countryCodes;
         }
     }
 
-    public CountryCode getCountryCode(final String country) {
+    public CountryCode getCountryCodeById(final String id) {
+        update(false);
         synchronized(countryCodesLock) {
-            return countryCodes.get(country);
+            for (CountryCode countryCode : countryCodes) {
+                if (countryCode.getId().equalsIgnoreCase(id)) {
+                    return countryCode;
+                }
+            }
+            return null;
+        }
+    }
+
+    public List<CountryCode> getCountryCode(final String country, final CountryCodeDocType documentTypeId) {
+        update(false);
+        synchronized(countryCodesLock) {
+            List<CountryCode> result = new ArrayList<>();
+            for (CountryCode countryCode : countryCodes) {
+                if (countryCode.getCode().equalsIgnoreCase(country)) {
+                    for (CountryCodeDocType docType : countryCode.getDocTypes()) {
+                        if (docType.equals(documentTypeId)) {
+                            result.add(countryCode);
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
+    public List<CountryCodeDocType> getDocumentTypes(final String country) {
+        update(false);
+        synchronized(countryCodesLock) {
+            List<CountryCodeDocType> result = new ArrayList<>();
+            for (CountryCode countryCode : countryCodes) {
+                if (countryCode.getCode().equalsIgnoreCase(country)) {
+                    for (CountryCodeDocType docType : countryCode.getDocTypes()) {
+                        if (!result.contains(docType)) {
+                            result.add(docType);
+                        }
+                    }
+                }
+            }
+            return result;
         }
     }
 

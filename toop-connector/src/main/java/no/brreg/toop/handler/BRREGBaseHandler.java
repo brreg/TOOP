@@ -39,6 +39,7 @@ public abstract class BRREGBaseHandler {
     private ToopIncomingHandler toopIncomingHandler;
 
     public static final String NORWEGIAN_COUNTRYCODE = "NO";
+    public static final String BRREG_TOOP_ID = "9999:norway2";
 
     private static final InetAddress[] dnsServers = {IPV4Addr.getAsInetAddress (1, 1, 1, 1),
             IPV4Addr.getAsInetAddress (8, 8, 8, 8),
@@ -114,7 +115,7 @@ public abstract class BRREGBaseHandler {
     }
 
     protected AgentPojo norway() {
-        CountryCode norway = toopIncomingHandler.getCountryCodeCache().getCountryCode(NORWEGIAN_COUNTRYCODE);
+        CountryCode norway = toopIncomingHandler.getCountryCodeCache().getCountryCodeById(BRREG_TOOP_ID);
         if (norway == null) {
             toopIncomingHandler.getLoggerHandler().log(LoggerHandler.Level.ERROR, "Could not find Norway in CountryCode cache!");
             return null;

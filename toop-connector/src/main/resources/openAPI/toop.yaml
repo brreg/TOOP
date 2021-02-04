@@ -31,6 +31,26 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CountryCode"
+  /documenttypes/{countrycode}:
+    get:
+      description: Query for registered document type ids for a given country code
+      operationId: getCountryDocumentTypes
+      parameters:
+        - name: countrycode
+          in: path
+          required: true
+          description: The country code
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CountryCodeDocType"
   /gbm/query/LP/{countrycode}/{legalperson}:
     get:
       description: Query for a given Legal Person
