@@ -61,8 +61,6 @@ public class BRREGeProcurementHandler extends BRREGBaseHandler {
 
     @Override
     public void handleIncomingRequest(final IncomingEDMRequest incomingEDMRequest) {
-        getToopIncomingHandler().getLoggerHandler().log(LoggerHandler.Level.DEBUG, "Got incoming eProcurement request: " + incomingEDMRequest.toString());
-
         final EDMRequest edmRequest = incomingEDMRequest.getRequest();
 
         // Check to see if the correct sample ids are requested
@@ -244,9 +242,6 @@ public class BRREGeProcurementHandler extends BRREGBaseHandler {
 
         //Send response
         try {
-            for (MEPayload payload : meMessage.getAllPayloads()) {
-                getToopIncomingHandler().getLoggerHandler().log(LoggerHandler.Level.INFO, "Sending eProcurement payload: " + new String(payload.getData().bytes(), StandardCharsets.UTF_8));
-            }
             TCAPIHelper.sendAS4Message(meRoutingInformation, meMessage);
         } catch (MEOutgoingException e) {
             sendIncomingRequestFailed("Got exception when sending AS4 message: " + e.getMessage());
@@ -255,6 +250,7 @@ public class BRREGeProcurementHandler extends BRREGBaseHandler {
 
     @Override
     public void handleIncomingResponse(final IncomingEDMResponse incomingEDMResponse) {
+        //We are currently not eProcurement DC. NOOP here.
     }
 
 }
