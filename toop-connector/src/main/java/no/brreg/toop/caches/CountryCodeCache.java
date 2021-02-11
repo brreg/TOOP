@@ -34,13 +34,14 @@ public class CountryCodeCache {
 
 
     public void update(final boolean force) {
-        LOGGER.info("Updating CountryCode cache");
         if (!force && cacheTime!=null && cacheTime.plus(CACHE_VALID_DURATION).isAfter(LocalDateTime.now())) {
             return; //Cache is still valid
         }
 
         if (isUpgradingCache.compareAndSet(false, true)) {
             try {
+                LOGGER.info("Updating CountryCode cache");
+
                 HttpResponse<String> businesscardResponse = Unirest.get(BUSINESSCARDS_LOOKUP)
                         .header("accept", "application/xml")
                         .asString();
