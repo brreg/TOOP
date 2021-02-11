@@ -118,7 +118,7 @@ public class BRREGeProcurementHandler extends BRREGBaseHandler {
 
                     attachmentPayload = MEPayload.builder()
                                             .mimeType(new MimeType(EMimeContentType.APPLICATION, "pdf"))
-                                            .randomContentID()
+                                            .contentID(EPROCUREMENT_SAMPLE_DOCUMENT_ID)
                                             .data(baos.toByteArray())
                                             .build();
                 } catch (IOException e) {
